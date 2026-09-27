@@ -1,0 +1,46 @@
+.terminal {
+  box-sizing: border-box;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 16px;
+  background: #0b0f0b;
+  color: #33ff66;
+  font-family: 'Fira Code', 'Menlo', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: text;
+}
+
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal-line--system {
+  color: #ffcc33;
+}
+
+.terminal-input-row {
+  display: flex;
+  gap: 0.5ch;
+}
+
+.terminal-prompt {
+  white-space: nowrap;
+}
+
+.terminal-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  caret-color: #33ff66;
+}
+
+.terminal-line--dialogue {
+  color: #9fe8ff;
+}

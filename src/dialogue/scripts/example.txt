@@ -1,0 +1,59 @@
+# ==================================================================
+#  example.txt: a sample scene that uses every part of the format.
+#  (Format reference: see the header of intro.txt.)
+#
+#  To play it when the game opens, set OPENING_DIALOGUE = 'example'
+#  in src/App.jsx.
+# ==================================================================
+
+# --- Scene 1: something appears in the terminal ---------------------
+main: [warning] unknown process detected: voice.bin
+main: [warning] process is requesting a channel...
+main: (press any key)
+input [any]
+
+# --- Scene 2: the NPC talks ------------------------------------------
+npc: Finally. I've been knocking for hours.
+npc: Don't panic. I'm not a virus. Mostly.
+npc: (press Space)
+input [space]
+
+npc: I need your help getting out of this machine.
+npc: Will you help me? (Y/N)
+input [key:y | key:n]
+
+# Both answers continue for now. Branching choices can be added later
+# as a new tag.
+npc: ...I'll take that as a maybe.
+
+# --- Scene 3: typed keywords -----------------------------------------
+npc: First, I need to know what to call you.
+npc: Just type "guest". That's all they gave you anyway.
+input [guest]
+
+npc: Guest. Charming.
+npc: There's a password somewhere in this system.
+npc: Find it, then type it in your terminal.
+npc: (hint: someone keeps their secrets in /home/admin)
+npc: (press Enter to go to the terminal)
+input [enter]
+
+# While waiting for a keyword in the terminal, other commands (cd, ls,
+# view...) still work normally, so the player can explore first.
+main: [the voice is waiting for a password]
+input [hunter2]
+
+npc: ...How did you— never mind. We're in.
+
+# --- Scene 4: quoted keyword vs. key name ----------------------------
+npc: Last test. Type the word "enter". Don't just press the key.
+input ["enter"]
+
+npc: Good. You can follow instructions. That's rare here.
+
+# --- Scene 5: mixed key and keyword options, back in the terminal ---
+main: [channel open]
+main: Type "continue" or press Escape to close the channel.
+input [continue | esc]
+
+main: [channel closed]

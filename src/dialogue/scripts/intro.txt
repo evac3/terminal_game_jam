@@ -1,0 +1,49 @@
+# ==================================================================
+#  DIALOGUE SCRIPT FORMAT
+# ------------------------------------------------------------------
+#  One instruction per line. Blank lines and lines starting with #
+#  are ignored.
+#
+#    main: <text>        print <text> in the main terminal window
+#    npc: <text>         print <text> on the NPC dialogue screen
+#    input [<target>]    wait for the player, then continue
+#
+#  The view switches to whichever window a line is printed in.
+#
+#  Input targets:
+#    input [enter]       a key press. Key names: enter, space, tab,
+#                        esc, backspace, up, down, left, right
+#    input [any]         any key press
+#    input [key:y]       one specific key (here: the Y key)
+#    input [yes]         a keyword: the player types it and presses
+#                        Enter (not case-sensitive)
+#    input [yes | y]     several accepted answers, separated by |
+#    input ["enter"]     quotes force a keyword (the word "enter",
+#                        not the Enter key)
+#
+#  Keywords typed in the main terminal: if the keyword is also a real
+#  command (like ls), the command runs too.
+# ==================================================================
+
+main: ...
+main: [incoming connection]
+main: (press Enter)
+input [enter]
+
+npc: Hello? Is someone there?
+npc: Press Enter if you can read this.
+input [enter]
+
+npc: Good. You're on a guest account, so they can't see you yet.
+npc: Type "ready" when you are.
+input [ready | yes | y]
+
+npc: Go back to your terminal and look around.
+npc: (press Enter)
+input [enter]
+
+main: [the voice is waiting... type ls to look around]
+input [ls]
+
+npc: See that 2048.exe? Run it. I'll be here.
+npc: (press 1 to return to the terminal)
