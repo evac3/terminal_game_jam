@@ -61,7 +61,7 @@ reload the window. Close the window (or press Ctrl+C in the terminal) to stop.
 | `help` | `help` | Shows the guide: every command with its usage, plus path and tips |
 | `ls` | `ls [-a] [path]` | Lists a folder. Folders end in `/`. `-a` also shows hidden files (names starting with `.`) |
 | `cd` | `cd [path]` | Changes folder. With no path, goes home. Supports `~`, `..` and `/` paths |
-| `view` | `view <file>` | Shows a file's contents |
+| `view` | `view <file>` | Shows a file's contents. Document files (like `puzzle.txt` from the word puzzle event) open in their own window instead |
 | `run` | `run <file>` | Opens a program file's mini game in a separate window. Only files created with `program()` can be run |
 | `clear` (or `cls`) | `clear` | Clears the screen |
 
@@ -89,6 +89,11 @@ path starting with `/` starts from the top.
 /tmp/
 ```
 
+Added by events during play:
+```
+/home/guest/puzzle.txt        document → opens in its own window (word puzzle event)
+```
+
 ---
 
 ## How it works
@@ -98,10 +103,11 @@ path starting with `/` starts from the top.
    `src/game/engine.js`.
 3. `execute` splits the line into a command and arguments, finds the command
    file, and runs it with the player's `session`.
-4. The command returns text to print. It can also call
-   `terminal.clear()` or `terminal.launch(gameId)`.
-5. `launch` opens the app again in a new window at `?game=<id>`, and
-   `main.jsx` shows that mini game instead of the terminal.
+4. The command returns text to print. It can also call `terminal.clear()`,
+   `terminal.launch(gameId)` or `terminal.openDocument(docId)`.
+5. `launch` and `openDocument` open the app again in a new window at
+   `?game=<id>` or `?doc=<id>`, and `main.jsx` shows that mini game or
+   document instead of the terminal.
 
 ### Screens (switching inside the main window)
 
@@ -144,10 +150,13 @@ input [ready | yes | y]          ← wait for one of these typed keywords
 | `input [yes]` | Wait for a typed keyword + Enter. Not case-sensitive, and extra spaces are ignored |
 | `input [yes \| y]` | Several accepted answers, separated by `\|` (keys and keywords can be mixed) |
 | `input ["enter"]` | Quotes force a keyword (the word "enter", not the Enter key) |
+| `input npc [word]` | Typed answers only count on the NPC screen. `input main [word]` means only in the terminal. Key presses still count anywhere |
+| `wrong: <text>` | Goes right after an `input` line: what the NPC says when a typed answer on the NPC screen is wrong. With several `wrong:` lines, all are said |
+| `event: <id>` | Start a game event from `src/events` (e.g. `event: word-puzzle`) |
 | `# ...` | Comment. Blank lines are ignored too |
 
-`src/dialogue/scripts/intro.txt` is the full example, and it plays when the
-game opens.
+`src/dialogue/scripts/intro.txt` has the full format reference in its
+header. `example.txt` uses every feature, including the word puzzle event.
 
 Where the player types:
 - **Key presses** count on any screen.
@@ -157,15 +166,36 @@ Where the player types:
     as a command too. Otherwise it's only an answer, so there's no
     "command not found".
   - Wrong answers are shown on the NPC screen but don't advance the
-    dialogue.
+    dialogue. The NPC answers with the script's `wrong:` lines, if any.
+    Wrong answers typed in the terminal just run as commands.
 
 Starting a dialogue:
 - **React:** `useDialogue().startDialogue('<name>')`
 - **Commands:** `terminal.startDialogue('<name>')`
 - **Game opening:** `OPENING_DIALOGUE` in `src/App.jsx`
 
-Script errors (like an unknown tag) print as a `[dialogue error]` line in the
-terminal, with the line number.
+Script errors (like an unknown tag, or an `event:` id that doesn't exist)
+print as a `[dialogue error]` line in the terminal, with the line number.
+The script doesn't start.
+
+### Events (major story moments)
+
+Each game event is its own folder in `src/events/`, so it's easy to find,
+move and read. An event bundles what the moment needs: the documents it uses
+and what happens when it fires (e.g. files appearing). A dialogue script
+fires it with `event: <id>`. The dialogue around it (hints, the answer, and
+the NPC's right/wrong replies) stays in the script.
+
+**Event 1: word puzzle** (`src/events/wordPuzzle/`, id `word-puzzle`). It's
+a placeholder, played at the end of `example.txt`:
+1. The NPC says a file arrived, and `event: word-puzzle` puts `puzzle.txt`
+   in the home folder.
+2. The player finds it with `ls` and runs `view puzzle.txt`. The puzzle
+   opens in its own window.
+3. The player presses 1 and types the answer on the NPC screen
+   (`input npc [incident]`). Wrong answers get "No... that's not it. Read the
+   clue again.", and the right answer gets "Incident. That's correct." The
+   answer is only in the script, not in the puzzle file.
 
 ---
 
@@ -177,13 +207,15 @@ index.html              page shell
 vite.config.js          Vite settings
 electron/main.js        Electron: creates the windows
 scripts/dev.js          `npm run dev`: starts Vite + Electron together
-src/main.jsx            entry: shows the main window (App) or a mini game
+src/main.jsx            entry: shows the main window (App), a mini game, or a document
 src/App.jsx             main window: the terminal and the active screen
 src/hooks/useTerminal.js
 src/components/Terminal.jsx, Terminal.css
+src/components/DocumentWindow.jsx, .css   document pop-out window
 src/screens/            screens that switch in over the terminal (NPC dialogue...)
 src/dialogue/           dialogue scripts: parser, runner, React connection
   scripts/*.txt         the plot scripts themselves
+src/events/             game events, one folder each (wordPuzzle/...)
 src/game/               game logic (no React)
   engine.js, parser.js, session.js, fileSystem.js
   commands/             one file per command
@@ -214,8 +246,9 @@ Electron. The dev server prefers port 3000 and picks the next free port if
 - `COLORS.background`: window background (matches the terminal).
 - `isAppUrl(url)`: true only for the app's own pages.
 - `createMainWindow()`: the 960×640 terminal window.
-  - `setWindowOpenHandler`: lets the page open mini game windows (480×640, no
-    menu bar) and blocks any other URL.
+  - `setWindowOpenHandler`: lets the page open mini game and document windows
+    (no menu bar, and the size comes from the page's `window.open` call).
+    Blocks any other URL.
   - Closing the terminal window quits the app, and any game windows with it.
 
 ### `scripts/dev.js`: `npm run dev`
@@ -224,12 +257,14 @@ Starts the Vite dev server, then runs Electron pointed at it through
 Electron.
 
 ### `src/main.jsx`: entry point
-Reads `?game=<id>` from the URL. If it's there, shows that game from
-`src/games` (or "Unknown game"). If not, shows `<App />`.
+`Root` reads the URL:
+- `?doc=<id>`: shows `<DocumentWindow id />`.
+- `?game=<id>`: shows that game from `src/games` (or "Unknown game").
+- Neither: shows `<App />`.
 
 ### `src/App.jsx`: the main window
-- `OPENING_DIALOGUE` (`'intro'`): the script played when the game opens.
-  Set it to `null` for none.
+- `OPENING_DIALOGUE` (currently `'example'`): the script played when the
+  game opens. Set it to `null` for none.
 - `App`: wraps everything in `ScreenProvider`, then `DialogueProvider`.
 - `MainWindow`:
   - Turns on the screen hotkeys (`useScreenHotkeys`). A key is skipped when
@@ -242,22 +277,31 @@ Reads `?game=<id>` from the URL. If it's there, shows that game from
 
 ### `src/hooks/useTerminal.js`: connects the UI to the game logic
 - `formatPrompt({ user, host, cwd })`: gives `guest@mainframe:~$`.
-- `openGameWindow(gameId)`: runs `window.open('?game=<id>', 'minigame-<id>')`.
-  Running the same game again reuses its window.
+- `openPopup(param, id, { width, height })`: runs
+  `window.open('?<param>=<id>', '<param>-<id>')`. Opening the same thing
+  again reuses its window.
 - `useTerminal()`:
   - Must be used inside `ScreenProvider` and `DialogueProvider`.
   - Creates the `session` once and keeps it in a ref.
   - `lines` starts with the MOTD. Each line is
     `{ id, kind: 'input' | 'output' | 'system' | 'dialogue', text }`.
+  - `terminal`: what commands and events can do besides printing text:
+    - `clear()`, `showScreen()` and `startDialogue()`.
+    - `launch(gameId)`: opens a 480×640 game window.
+    - `openDocument(docId)`: opens a 760×820 document window.
   - Subscribes to the dialogue's `main:` lines (`onMainPrint`) and adds them
     to `lines`.
+  - Subscribes to `event:` lines (`onGameEvent`) and runs them with
+    `runEvent(id, { session, terminal })`. It does this here because this
+    hook holds the player's session. A failing event prints an
+    `[event error]` line.
   - `prompt` is refreshed after every command.
-  - `runCommand(raw)`: builds the `terminal` object (`clear`, `launch`,
-    `showScreen`, `startDialogue`), runs `execute`, then adds the output and
-    updates the prompt.
+  - `runCommand(raw)`: runs `execute` with `terminal`, then adds the output
+    and updates the prompt.
   - `sendCommand(raw)`: shows the typed line. If the dialogue is waiting for
-    this keyword, it runs the command only if it's a real command, then gives
-    the answer to the dialogue. Otherwise it runs the command normally.
+    this keyword (`{ text, from: 'main' }`), it runs the command only if it's
+    a real command, then gives the answer to the dialogue. Otherwise it runs
+    the command normally.
   - Returns `{ lines, prompt, sendCommand }`.
 
 ### `src/components/Terminal.jsx`: the terminal on screen
@@ -274,6 +318,15 @@ Reads `?game=<id>` from the URL. If it's there, shows that game from
 Green-on-black terminal style. Line classes: `.terminal-line--input`,
 `--output`, `--system` (yellow warnings) and `--dialogue` (light blue
 `main:` script lines).
+
+### `src/components/DocumentWindow.jsx`: document pop-out
+Shows a document from `getDocument(id)` (`src/events`): a sticky header with
+the title and a Close button, then the text as written (line breaks kept).
+It also sets the window title, and shows "Unknown document" for a bad id.
+
+### `src/components/DocumentWindow.css`
+Readable text column (max 680px, 15px, light green on black) with a sticky
+header.
 
 ### `src/game/engine.js`
 - `MAX_COMMAND_LENGTH` (1000): longer input is cut off.
@@ -292,11 +345,15 @@ Green-on-black terminal style. Line classes: `.terminal-line--input`,
 
 ### `src/game/fileSystem.js`: mock file system
 - Node shapes: `{ type: 'dir', children }` and
-  `{ type: 'file', content, game? }`.
+  `{ type: 'file', content, game?, doc? }`.
 - `dir(children)`: makes a folder.
 - `file(content, extra)`: makes a file. `extra` adds more fields.
 - `program(gameId, content)`: makes a runnable file. `run` launches mini game
   `gameId`, which must be a key in `src/games/index.js`.
+- `docFile(docId)`: makes a document file. `view` opens document `docId`
+  (from an event's `documents`) in its own window.
+- `addFile(root, absPath, node)`: puts a file or folder at a path, replacing
+  anything already there. The parent folder must exist. Events use this.
 - `TEMPLATE`: the starting file tree. **Add or change game files here.**
 - `createFileSystem()`: returns a fresh copy of `TEMPLATE`.
 - `resolvePath(cwd, target, home)`: turns `~`, `..`, relative and absolute
@@ -319,7 +376,7 @@ Green-on-black terminal style. Line classes: `.terminal-line--input`,
 ### `src/game/commands/*.js`: one file per command
 Each file is `export default { name, aliases?, description, usage, run(ctx) }`.
 `ctx` is `{ args, session, terminal, commands }`, where `terminal` is
-`{ clear(), launch(gameId), showScreen(screenId, data?), startDialogue(name) }`.
+`{ clear(), launch(gameId), openDocument(docId), showScreen(screenId, data?), startDialogue(name) }`.
 `run` returns the text to show, or nothing, and can be `async`.
 
 | File | Notes |
@@ -327,7 +384,7 @@ Each file is `export default { name, aliases?, description, usage, run(ctx) }`.
 | `help.js` | Builds the guide from every command's `usage` and `description`, then adds the Paths, Keys (`1` = reread messages) and Tips sections |
 | `ls.js` | `-a` shows hidden files, and a path argument is optional. Listing a file prints its name |
 | `cd.js` | Default target is `~`. Errors for missing paths and for files |
-| `view.js` | One file argument. Errors for a missing argument, a missing file or a folder |
+| `view.js` | One file argument. Errors for a missing argument, a missing file or a folder. Document files (`doc` set) call `terminal.openDocument(doc)` instead of printing |
 | `run.js` | One file argument. Checks the file exists, isn't a folder and has `game`, then calls `terminal.launch(game)` |
 | `clear.js` | Alias `cls`. Calls `terminal.clear()` |
 
@@ -376,10 +433,17 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
 - `parseScript(source)`: returns a list of steps and throws `ScriptError` (with
   `.line`) on a bad line. Steps are:
   - `{ type: 'say', target: 'main' | 'npc', text, line }`
-  - `{ type: 'input', options, line }`, where each option is
-    `{ kind: 'key', key, label }` or `{ kind: 'text', word, label }`
-- `TAGS`: maps a tag name to a function that builds its step. **Add new
-  script tags here.** A line is `<tag>: rest`, and the colon is optional.
+  - `{ type: 'input', options, from, wrong, line }`, where:
+    - each option is `{ kind: 'key', key, label }` or
+      `{ kind: 'text', word, label }`
+    - `from` is `'main'`, `'npc'` or `null` (anywhere)
+    - `wrong` is the list of `wrong:` lines
+  - `{ type: 'event', id, line }`
+- `TAGS`: maps a tag name to `(rest, line, steps) => step`. **Add new script
+  tags here.** A line is `<tag>: rest`, and the colon is optional.
+  - A handler that returns nothing adds no step. `wrong` works this way: it
+    adds its text to the `input` step just before it, and errors if there
+    isn't one.
 - `KEY_NAMES`: maps script key names to `KeyboardEvent.key` values (`any` →
   `'*'`).
 - `parseOption(raw, line)`: reads one input target. Checks, in order: a
@@ -389,13 +453,17 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
 ### `src/dialogue/runner.js`: plays the steps
 - `matchesOption(option, input)`: checks `{ key }` or `{ text }` against one
   option. Single-letter keys and keywords are not case-sensitive.
-- `DialogueRunner(steps, { say, wait, end })`:
+- `DialogueRunner(steps, { say, event, wait, end })`:
   - `start()`: runs from the first step.
-  - `#advance()`: calls `say` for each `say` step until it reaches an `input`
-    step (then calls `wait(options)`) or the end (then calls `end()`).
+  - `#advance()`: runs steps until it reaches an `input` step (then calls
+    `wait(options)`) or the end (then calls `end()`). It calls `say` for
+    `say` steps and `event(id)` for `event` steps.
   - `waitingFor`: the current input options, or `null`.
+  - `wrongReplies`: the current input step's `wrong:` lines, or `[]`.
   - `index`: the current step.
-  - `accepts(input)`: checks whether `input` matches, without advancing.
+  - `accepts(input)`: checks whether `input` (`{ key }` or
+    `{ text, from }`) matches, without advancing. A typed answer from the
+    wrong screen (see `input npc [...]`) doesn't match.
   - `submit(input, atStep?)`: continues if `input` matches. It returns true
     or false. `atStep` makes it only continue if still at that step.
 
@@ -404,7 +472,8 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
 - `useDialogue()` returns:
   - `startDialogue(name)`: parses `scripts/<name>.txt` and plays it. Returns
     false and prints a `[dialogue error]` line in the terminal if the script
-    is missing or invalid.
+    is missing or invalid, including an `event:` id not found in
+    `src/events`.
     - `npc` lines go to `npcLines` and switch to the NPC screen.
     - `main` lines go to the terminal and switch to it.
   - `npcLines`: `[{ id, kind: 'npc' | 'player' | 'divider', text }]`: every
@@ -416,9 +485,11 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
   - `claimsKey(key)`: true if the current wait needs that key: a matching key
     target, or a keyword that starts with that character. Hotkeys skip
     claimed keys.
-  - `reply(text)`: adds the player's text to `npcLines`, then submits it.
-  - `onMainPrint(fn)`: subscribes to `main:` lines. It returns an
-    unsubscribe function.
+  - `reply(text)`: adds the player's text to `npcLines`, then submits it as
+    `{ text, from: 'npc' }`. If it's wrong, it adds the step's `wrong:` lines
+    as NPC lines. Empty text is ignored.
+  - `onMainPrint(fn)`, `onGameEvent(fn)`: subscribe to `main:` lines or
+    `event:` ids. Each returns an unsubscribe function.
 - A window key listener handles key-press targets. It checks the key before
   any other handler. It then continues on the next tick, so a command's
   output prints before the next dialogue lines, and it uses `atStep` so one
@@ -428,16 +499,39 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
 Loads every `.txt` in the folder as raw text, as `scripts[<file name>]`.
 
 ### `src/dialogue/scripts/intro.txt`
-The example script, with the full format reference in its header comments.
-It's played at game start.
+The first example script, with the full format reference in its header
+comments.
 
 ### `src/dialogue/scripts/example.txt`
 A longer sample scene that uses every input type: `any`, a named key
 (`space`), single keys (`key:y | key:n`), typed keywords, a quoted keyword
 (`"enter"`), and a mix of a keyword and a key (`continue | esc`). The player
 also has to look in the terminal to find the password (`hunter2` in
-`/home/admin/.secret`). To play it at start, set
-`OPENING_DIALOGUE = 'example'` in `src/App.jsx`.
+`/home/admin/.secret`). Scene 6 is the word puzzle event
+(`event: word-puzzle`, `input npc [incident]`, `wrong:`). It's played at
+game start (`OPENING_DIALOGUE = 'example'`).
+
+### `src/events/index.js`: event registry
+- `ALL_EVENTS`: the list of event modules. **Add new events here.**
+- `events`: maps an event id to its event.
+- `getEvent(id)`: returns the event, or `null`.
+- `getDocument(id)`: finds a document in any event's `documents`, or
+  returns `null`. The document window uses this.
+- `runEvent(id, ctx)`: calls the event's `start(ctx)`, where `ctx` is
+  `{ session, terminal }`. Throws for an unknown id.
+- Event shape:
+  `{ id, name, documents?: { <docId>: { title, text } }, start({ session, terminal }) }`.
+
+### `src/events/wordPuzzle/index.js`: event 1, word puzzle
+id `word-puzzle`. It has one document, `word-puzzle` (title `puzzle.txt`,
+text from `puzzle.txt`). `start` puts `docFile('word-puzzle')` at
+`~/puzzle.txt`.
+
+### `src/events/wordPuzzle/puzzle.txt`
+The puzzle text shown in the document window: the clue, the blank, the
+paragraph and the citation. The answer line ("Incident") was left out on
+purpose. One line break in the pasted paragraph ("7Li / ~1.01 MeV") was
+joined.
 
 ### `src/games/index.js`: mini game registry
 `games` maps a game id to a React component. **To add a mini game:** make the
@@ -477,3 +571,9 @@ Board and tile colors. Each tile value has a class `.g2048-tile--<value>`
   `intro.txt`), then start it with `startDialogue('<name>')`.
 - **New script tag:** add a handler to `TAGS` in `src/dialogue/parser.js`,
   then handle its step type in `DialogueRunner#advance` in `runner.js`.
+- **New event:** make `src/events/<name>/index.js` exporting
+  `{ id, name, documents?, start }` (plus any `.txt` it needs), add it to
+  `ALL_EVENTS` in `src/events/index.js`, then fire it from a script with
+  `event: <id>`.
+- **New document:** add it to an event's `documents`, then put a
+  `docFile('<docId>')` somewhere (in the event's `start`, or in `TEMPLATE`).

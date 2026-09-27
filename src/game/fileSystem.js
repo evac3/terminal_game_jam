@@ -3,15 +3,18 @@
  *
  * A node is either:
  *   { type: 'dir',  children: { [name]: node } }
- *   { type: 'file', content: string, game?: string }
+ *   { type: 'file', content: string, game?: string, doc?: string }
  *
  * A file with `game` set is a program: `run <file>` launches that mini game
  * (the id must match a key in src/games/index.js).
+ * A file with `doc` set is a document: `view <file>` opens it in its own
+ * window (the id must match a document in an event, see src/events).
  */
 
 export const dir = (children = {}) => ({ type: 'dir', children });
 export const file = (content = '', extra = {}) => ({ type: 'file', content, ...extra });
 export const program = (game, content = `[program: ${game}]`) => file(content, { game });
+export const docFile = (docId) => file('', { doc: docId });
 
 const TEMPLATE = dir({
   home: dir({
@@ -72,6 +75,15 @@ export function getNode(root, absPath) {
     node = node.children[segment];
   }
   return node;
+}
+
+/** Put `node` at absPath (replacing anything there). The parent folder must exist. */
+export function addFile(root, absPath, node) {
+  const parts = absPath.split('/').filter(Boolean);
+  const name = parts.pop();
+  const parent = getNode(root, '/' + parts.join('/'));
+  if (!name || parent?.type !== 'dir') throw new Error(`addFile: no folder for ${absPath}`);
+  parent.children[name] = node;
 }
 
 /** Shorten the home directory to ~ for prompts. */

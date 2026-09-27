@@ -7,6 +7,13 @@
 #    main: <text>        print <text> in the main terminal window
 #    npc: <text>         print <text> on the NPC dialogue screen
 #    input [<target>]    wait for the player, then continue
+#    input npc [<word>]  typed answers only count on the NPC screen
+#                        (input main [...] = only in the terminal)
+#    wrong: <text>       right after an input line: what the NPC says
+#                        when a typed answer on the NPC screen is wrong
+#                        (several wrong: lines = all are said)
+#    event: <id>         start a game event (src/events), e.g.
+#                        event: word-puzzle
 #
 #  The view switches to whichever window a line is printed in.
 #

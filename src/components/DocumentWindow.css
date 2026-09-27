@@ -1,0 +1,51 @@
+.doc-window {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px 24px 32px;
+  background: #0b0f0b;
+  color: #d8f5dd;
+  font-family: 'Fira Code', 'Menlo', 'Consolas', monospace;
+}
+
+.doc-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #1f8a3c;
+  background: #0b0f0b;
+  color: #33ff66;
+}
+
+.doc-header button {
+  padding: 4px 12px;
+  border: 1px solid #33ff66;
+  background: transparent;
+  color: #33ff66;
+  font: inherit;
+  cursor: pointer;
+}
+
+.doc-header button:hover {
+  background: #33ff66;
+  color: #0b0f0b;
+}
+
+.doc-text {
+  max-width: 680px;
+  margin: 0 auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.doc-missing {
+  padding: 16px;
+  color: #ffcc33;
+  font-family: monospace;
+}

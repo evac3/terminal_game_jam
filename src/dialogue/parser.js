@@ -4,7 +4,8 @@
  *
  * Steps:
  *   { type: 'say',   target: 'main' | 'npc', text, line }
- *   { type: 'input', options: [option...], line }
+ *   { type: 'input', options: [option...], from: 'main' | 'npc' | null, wrong: [text...], line }
+ *   { type: 'event', id, line }
  *
  * Input options (the player must satisfy any one of them):
  *   { kind: 'key',  key: 'Enter', label: 'Enter' }   // key press; key '*' = any key
@@ -56,16 +57,35 @@ function textOption(word, lineNo) {
 }
 
 /**
- * Tag handlers: tag name -> (rest of line, line number) => step.
+ * Tag handlers: tag name -> (rest of line, line number, steps so far) => step.
+ * Returning nothing adds no step (used by `wrong`, which changes the step before it).
  * Add new tags here.
  */
 export const TAGS = {
   main: (text, line) => ({ type: 'say', target: 'main', text, line }),
   npc: (text, line) => ({ type: 'say', target: 'npc', text, line }),
+  // input [targets]  or  input npc [targets] / input main [targets]
   input: (rest, line) => {
-    const m = rest.match(/^\[(.*)\]$/);
+    const m = rest.match(/^(?:(main|npc)\s+)?\[(.*)\]$/i);
     if (!m) throw new ScriptError(line, 'input needs a target in brackets, e.g. input [enter]');
-    return { type: 'input', options: m[1].split('|').map((o) => parseOption(o, line)), line };
+    return {
+      type: 'input',
+      options: m[2].split('|').map((o) => parseOption(o, line)),
+      from: m[1]?.toLowerCase() ?? null,
+      wrong: [],
+      line,
+    };
+  },
+  // wrong: <text>  what the NPC says when a typed answer on the NPC screen is wrong
+  wrong: (text, line, steps) => {
+    const prev = steps[steps.length - 1];
+    if (prev?.type !== 'input') throw new ScriptError(line, 'wrong must come right after an input line');
+    prev.wrong.push(text);
+  },
+  // event: <id>  start a game event from src/events
+  event: (id, line) => {
+    if (!/^[\w-]+$/.test(id)) throw new ScriptError(line, 'event needs an id, e.g. event: word-puzzle');
+    return { type: 'event', id, line };
   },
 };
 
@@ -88,7 +108,8 @@ export function parseScript(source) {
     const handler = m && TAGS[m[1].toLowerCase()];
     if (!handler) throw new ScriptError(lineNo, `unknown tag in "${line}"`);
 
-    steps.push(handler(m[2].trim(), lineNo));
+    const step = handler(m[2].trim(), lineNo, steps);
+    if (step) steps.push(step);
   });
   return steps;
 }

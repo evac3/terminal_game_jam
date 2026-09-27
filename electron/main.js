@@ -22,14 +22,13 @@ function createMainWindow() {
     webPreferences: { contextIsolation: true, sandbox: true },
   });
 
-  // Mini game windows are opened by the page with window.open (see useTerminal.js).
+  // Mini game and document windows are opened by the page with window.open
+  // (see useTerminal.js), which also sets their size.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (!isAppUrl(url)) return { action: 'deny' };
     return {
       action: 'allow',
       overrideBrowserWindowOptions: {
-        width: 480,
-        height: 640,
         backgroundColor: COLORS.background,
         autoHideMenuBar: true,
       },

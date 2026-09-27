@@ -1,16 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createSession, getPrompt, MOTD } from '../game/session';
 import { execute, isCommand } from '../game/engine';
 import { useScreen } from '../screens/ScreenContext';
 import { useDialogue } from '../dialogue/DialogueContext';
+import { runEvent } from '../events';
 
 export function formatPrompt({ user, host, cwd }) {
   return `${user}@${host}:${cwd}$`;
 }
 
-/** Opens a mini game in its own window. main.jsx sees ?game= and renders the game. */
-function openGameWindow(gameId) {
-  return window.open(`?game=${encodeURIComponent(gameId)}`, `minigame-${gameId}`, 'width=480,height=640');
+/**
+ * Opens this app in its own window with `?<param>=<id>`; main.jsx reads it and
+ * shows a mini game (?game=) or a document (?doc=). Reusing `name` reuses the window.
+ */
+function openPopup(param, id, { width, height }) {
+  return window.open(`?${param}=${encodeURIComponent(id)}`, `${param}-${id}`, `width=${width},height=${height}`);
 }
 
 /**
@@ -20,7 +24,7 @@ function openGameWindow(gameId) {
  */
 export function useTerminal() {
   const { showScreen } = useScreen();
-  const { onMainPrint, accepts, submit, startDialogue } = useDialogue();
+  const { onMainPrint, onGameEvent, accepts, submit, startDialogue } = useDialogue();
 
   const sessionRef = useRef(null);
   if (!sessionRef.current) sessionRef.current = createSession();
@@ -37,26 +41,51 @@ export function useTerminal() {
     setLines((prev) => [...prev, { id: nextIdRef.current++, kind, text }]);
   }, []);
 
+  // What commands and events can do besides printing text.
+  const terminal = useMemo(
+    () => ({
+      clear: () => setLines([]),
+      showScreen,
+      startDialogue,
+      launch: (gameId) => {
+        if (!openPopup('game', gameId, { width: 480, height: 640 })) {
+          appendLine('Could not open the game window.', 'system');
+        }
+      },
+      openDocument: (docId) => {
+        if (!openPopup('doc', docId, { width: 760, height: 820 })) {
+          appendLine('Could not open the document window.', 'system');
+        }
+      },
+    }),
+    [appendLine, showScreen, startDialogue]
+  );
+
   // Dialogue `main:` lines are printed here.
   useEffect(() => onMainPrint(appendLine), [onMainPrint, appendLine]);
+
+  // Dialogue `event:` lines run here, because this hook holds the player's session.
+  useEffect(
+    () =>
+      onGameEvent((id) => {
+        try {
+          runEvent(id, { session: sessionRef.current, terminal });
+        } catch (err) {
+          console.error(`Event "${id}":`, err);
+          appendLine(`[event error] ${id}: ${err.message}`, 'system');
+        }
+      }),
+    [onGameEvent, terminal, appendLine]
+  );
 
   const runCommand = useCallback(
     async (raw) => {
       const session = sessionRef.current;
-      const terminal = {
-        clear: () => setLines([]),
-        showScreen,
-        startDialogue,
-        launch: (gameId) => {
-          if (!openGameWindow(gameId)) appendLine('Could not open the game window.', 'system');
-        },
-      };
-
       const output = await execute(raw, { session, terminal });
       if (output) appendLine(output);
       setPrompt(getPrompt(session));
     },
-    [appendLine, showScreen, startDialogue]
+    [appendLine, terminal]
   );
 
   const sendCommand = useCallback(
@@ -65,9 +94,10 @@ export function useTerminal() {
 
       // A dialogue keyword that isn't also a real command is only an answer,
       // so don't print "command not found" for it.
-      const answersDialogue = accepts({ text: raw });
+      const answer = { text: raw, from: 'main' };
+      const answersDialogue = accepts(answer);
       if (raw.trim() && (!answersDialogue || isCommand(raw))) await runCommand(raw);
-      if (answersDialogue) submit({ text: raw });
+      if (answersDialogue) submit(answer);
     },
     [appendLine, accepts, submit, runCommand]
   );

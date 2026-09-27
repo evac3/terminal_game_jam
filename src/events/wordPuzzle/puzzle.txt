@@ -1,0 +1,12 @@
+Word puzzle
+
+This is a happy occasion! Should we begin?
+________
+
+Find a word in the paragraph to fit the clue!
+
+The kinetic energies of the reaction products depend on the decay channel. In the predominant channel (94%), the α-particle carries ~1.47 MeV and 7Li ~0.84 MeV. This reaction channel has a Q-value of 2.31 MeV. In the minor channel (6%), the α-particle carries ~1.78 MeV and 7Li ~1.01 MeV, resulting in a Q-value of 2.79 MeV. The track lengths of these α and 7Li high-LET particles are approximately 4–5 µm and 9–10 µm, respectively. Such highly localized energy deposition, resulting in dense ionization tracks within the cell and particularly around the nucleus, is primarily responsible for the cytotoxic effect of BNCT.
+However, the therapeutic effectiveness of BNCT is governed not only by the microdistribution of 10B within the tumor and the surrounding tissues, but also by the energy spectrum of the incident neutron flux. In effect, from a radiological perspective, neutron–induced effects involve far more than just the 10B (n,α) 7Li reaction.
+
+
+Terranova, M. L. (2026). From Source to Target: The Neutron Pathway for the Clinical Translation of Boron Neutron Capture. Journal of Nuclear Engineering, 7(1), 6. https://doi.org/10.3390/jne7010006

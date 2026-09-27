@@ -12,7 +12,7 @@ export function isCommand(raw) {
  * Parse a raw input line and route it to the matching command handler.
  *
  * `terminal` is how commands affect the screen beyond printing text:
- *   { clear(), launch(gameId), showScreen(screenId, data?), startDialogue(name) }
+ *   { clear(), launch(gameId), openDocument(docId), showScreen(screenId, data?), startDialogue(name) }
  *
  * Returns the text to print (may be empty).
  */

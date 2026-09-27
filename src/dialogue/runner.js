@@ -6,6 +6,7 @@
  *
  * Callbacks:
  *   say(target, text)   print a line ('main' or 'npc')
+ *   event(id)           a game event fires (`event:` line)
  *   wait(options)       now waiting on these input options
  *   end()               the script finished
  */
@@ -22,9 +23,9 @@ export function matchesOption(option, input) {
 }
 
 export class DialogueRunner {
-  constructor(steps, { say, wait, end }) {
+  constructor(steps, { say, event, wait, end }) {
     this.steps = steps;
-    this.callbacks = { say, wait, end };
+    this.callbacks = { say, event, wait, end };
     this.index = 0;
     this.done = false;
   }
@@ -35,14 +36,30 @@ export class DialogueRunner {
     this.#advance();
   }
 
-  /** The options being waited on, or null. */
-  get waitingFor() {
+  get #inputStep() {
     const step = this.steps[this.index];
-    return !this.done && step?.type === 'input' ? step.options : null;
+    return !this.done && step?.type === 'input' ? step : null;
   }
 
+  /** The options being waited on, or null. */
+  get waitingFor() {
+    return this.#inputStep?.options ?? null;
+  }
+
+  /** NPC replies for a wrong typed answer (`wrong:` lines), or []. */
+  get wrongReplies() {
+    return this.#inputStep?.wrong ?? [];
+  }
+
+  /**
+   * input: { key } or { text, from: 'main' | 'npc' }. A typed answer only
+   * counts from the screen named in `input npc [...]` / `input main [...]`.
+   */
   accepts(input) {
-    return this.waitingFor?.some((option) => matchesOption(option, input)) ?? false;
+    const step = this.#inputStep;
+    if (!step) return false;
+    if (input.text != null && step.from && input.from !== step.from) return false;
+    return step.options.some((option) => matchesOption(option, input));
   }
 
   /**
@@ -64,6 +81,7 @@ export class DialogueRunner {
         return;
       }
       if (step.type === 'say') this.callbacks.say(step.target, step.text);
+      if (step.type === 'event') this.callbacks.event(step.id);
       this.index++;
     }
     this.done = true;
