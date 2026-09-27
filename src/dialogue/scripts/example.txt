@@ -199,3 +199,24 @@ player: > ok ok
 input [Enter]
 player: > tell me what to do
 input [Enter]
+
+# --- Scene 5: FIRST EVENT: word puzzle ----------------
+# `event: word-puzzle` runs src/events/wordPuzzle: it puts puzzle.txt in
+# the player's home folder. `view puzzle.txt` opens it in its own window.
+# The answer must be typed on the NPC screen (`input npc [...]`). Each
+# wrong answer gets the `wrong:` line(s) from the NPC.
+
+npc: Wait. Something just landed in your home folder.
+event: word-puzzle
+npc: It's a puzzle. Find it in your terminal and read it.
+npc: When you know the answer, come back here (press 1) and tell me.
+npc: (press Enter to go to the terminal)
+input [Enter]
+
+main: [new file: ~/puzzle.txt]
+main: (view it, then press 1 to answer on the speaker screen)
+input npc [incident]
+wrong: No... that's not it. Read the clue again.
+
+npc: Incident. That's correct.
+npc: (press 1 to return to the terminal)
