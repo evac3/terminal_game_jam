@@ -19,7 +19,6 @@ export const docFile = (docId) => file('', { doc: docId });
 const TEMPLATE = dir({
   home: dir({
     guest: dir({
-      '2048.exe': program('2048', 'A puzzle program. Start it with: run 2048.exe'),
       'readme.txt': file(
         'Welcome, guest.\n' +
           'Your access on this machine is limited.\n' +
@@ -30,8 +29,10 @@ const TEMPLATE = dir({
       }),
     }),
     admin: dir({
-      'backup.tar': file('[binary data]'),
-      '.secret': file('the password is hunter2'),
+      getStarted: dir({
+        '2048.exe': program('2048', 'A puzzle program. Start it with: run 2048.exe'),
+        'tutorial.txt': file('Great job!\nType 1 to navigate between my messages and terminal'),
+      }),
     }),
   }),
   etc: dir({

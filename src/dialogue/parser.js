@@ -56,6 +56,21 @@ function textOption(word, lineNo) {
   return { kind: 'text', word: normalized, label: `"${normalized}"` };
 }
 
+/* Helper to generate standard "input [enter]" steps
+function createEnterKeyInput(line) {
+  return {
+    type: 'input',
+    options: [{ kind: 'key', key: 'Enter', label: 'enter' }],
+    from: null,
+    wrong: [],
+    line,
+  };
+}
+// Helper to delay between consecutive npc lines (dynamic reading time)
+function getReadingDelay(text) {
+  return Math.min(2500, Math.max(900, text.length * 45));
+}
+  */
 /**
  * Tag handlers: tag name -> (rest of line, line number, steps so far) => step.
  * Returning nothing adds no step (used by `wrong`, which changes the step before it).
@@ -64,6 +79,22 @@ function textOption(word, lineNo) {
 export const TAGS = {
   main: (text, line) => ({ type: 'say', target: 'main', text, line }),
   npc: (text, line) => ({ type: 'say', target: 'npc', text, line }),
+  player: (text, line) => ({ type: 'say', target: 'player', text, line }),
+
+  // Manual wait support (e.g. wait: 1.5s or wait: 800ms)
+  wait: (text, line) => {
+    const raw = text.trim().toLowerCase();
+    let ms = 0;
+    if (raw.endsWith('ms')) ms = parseFloat(raw.replace('ms', ''));
+    else if (raw.endsWith('s')) ms = parseFloat(raw.replace('s', '')) * 1000;
+    else ms = parseFloat(raw);
+
+    if (isNaN(ms) || ms < 0) {
+      throw new ScriptError(line, `Invalid wait duration: "${text}"`);
+    }
+    return { type: 'wait', duration: ms, line };
+  },
+
   // input [targets]  or  input npc [targets] / input main [targets]
   input: (rest, line) => {
     const m = rest.match(/^(?:(main|npc)\s+)?\[(.*)\]$/i);
@@ -97,19 +128,54 @@ export class ScriptError extends Error {
 }
 
 export function parseScript(source) {
-  const steps = [];
+  const rawSteps = [];
+
+  // Pass 1: Parse all tags into intermediate raw steps
   source.split(/\r?\n/).forEach((rawLine, i) => {
     const lineNo = i + 1;
     const line = rawLine.trim();
     if (!line || line.startsWith('#')) return;
 
-    // "<tag>: rest" or "<tag> rest"
     const m = line.match(/^([a-z]+)\s*:?\s?(.*)$/i);
     const handler = m && TAGS[m[1].toLowerCase()];
     if (!handler) throw new ScriptError(lineNo, `unknown tag in "${line}"`);
 
-    const step = handler(m[2].trim(), lineNo, steps);
-    if (step) steps.push(step);
+    const step = handler(m[2].trim(), lineNo, rawSteps);
+    if (step) rawSteps.push(step);
   });
+
+  // Pass 2: Normalize and auto-inject wait / input steps
+  const steps = [];
+
+  for (let i = 0; i < rawSteps.length; i++) {
+    const curr = rawSteps[i];
+    const next = rawSteps[i + 1];
+
+    steps.push(curr);
+
+    /* Rule 1: PLAYER lines -> input [enter] after every line (unless next is already an input)
+    if (curr.type === 'say' && (curr.target === 'player' || curr.target === 'npc')) {
+      if (next?.type !== 'input') {
+        steps.push(createEnterKeyInput(curr.line));
+      }
+    }
+
+    // Rule 2: NPC lines
+    if (curr.type === 'say' && curr.target === 'npc') {
+      if (next?.type === 'say' && next?.target === 'npc') {
+        // Between consecutive NPC lines -> auto wait
+        steps.push({
+          type: 'wait',
+          duration: getReadingDelay(curr.text),
+          line: curr.line,
+        });
+      } else if (next?.type !== 'input') {
+        // End of an NPC chunk -> input [enter]
+        steps.push(createEnterKeyInput(curr.line));
+      }
+    }
+      */
+  }
+
   return steps;
 }

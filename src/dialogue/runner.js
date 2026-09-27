@@ -1,14 +1,14 @@
 /**
  * Plays a list of parsed steps (see parser.js).
  *
- * It runs `say` steps one after another until it reaches an `input` step, then
+ * It runs `say`, `event`, and `wait` steps until it reaches an `input` step, then
  * waits until submit() gets a matching key press or keyword.
  *
  * Callbacks:
- *   say(target, text)   print a line ('main' or 'npc')
- *   event(id)           a game event fires (`event:` line)
- *   wait(options)       now waiting on these input options
- *   end()               the script finished
+ *   say(target, text, step)  print a line ('main' or 'npc')
+ *   event(id)                a game event fires (`event:` line)
+ *   wait(options)            now waiting on player input options
+ *   end()                    the script finished
  */
 
 /** Does player input { key } or { text } satisfy one input option? */
@@ -23,6 +23,8 @@ export function matchesOption(option, input) {
 }
 
 export class DialogueRunner {
+  #timerId = null;
+
   constructor(steps, { say, event, wait, end }) {
     this.steps = steps;
     this.callbacks = { say, event, wait, end };
@@ -31,9 +33,17 @@ export class DialogueRunner {
   }
 
   start() {
+    this.stop();
     this.index = 0;
     this.done = false;
     this.#advance();
+  }
+
+  stop() {
+    if (this.#timerId != null) {
+      clearTimeout(this.#timerId);
+      this.#timerId = null;
+    }
   }
 
   get #inputStep() {
@@ -76,14 +86,29 @@ export class DialogueRunner {
   #advance() {
     while (this.index < this.steps.length) {
       const step = this.steps[this.index];
+
+      if (step.type === 'wait') {
+        this.#timerId = setTimeout(() => {
+          this.#timerId = null;
+          this.index++;
+          this.#advance();
+        }, step.duration);
+        return;
+      }
       if (step.type === 'input') {
         this.callbacks.wait(step.options);
         return;
       }
-      if (step.type === 'say') this.callbacks.say(step.target, step.text);
-      if (step.type === 'event') this.callbacks.event(step.id);
+      if (step.type === 'say') {
+        this.callbacks.say(step.target, step.text, step);
+      }
+      if (step.type === 'event') {
+        this.callbacks.event(step.id);
+      }
+
       this.index++;
     }
+
     this.done = true;
     this.callbacks.end();
   }

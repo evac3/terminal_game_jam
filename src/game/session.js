@@ -11,8 +11,8 @@ export function createSession() {
   return {
     user: 'guest',
     host: 'mainframe',
-    home: '/home/guest',
-    cwd: '/home/guest',
+    home: '/home',
+    cwd: '/home',
     fs: createFileSystem(),
     history: [],
   };
