@@ -1,4 +1,4 @@
-import placeholder from './image.jpg';
+import placeholder from './image.webp';
 
 /**
  * Images the player can open with `view`. Key = image id, used by
@@ -8,7 +8,7 @@ import placeholder from './image.jpg';
  * To replace the placeholder: overwrite image.jpg (keep the name) or change the import.
  */
 export const images = {
-  placeholder: { title: 'image.jpg', src: placeholder },
+  placeholder: { title: 'image.webp', src: placeholder },
 };
 
 export function getImage(id) {

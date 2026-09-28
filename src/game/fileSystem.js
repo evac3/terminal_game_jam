@@ -35,7 +35,7 @@ const TEMPLATE = dir({
       getStarted: dir({
         '2048.exe': program('2048', 'A puzzle program. Start it with: run 2048.exe'),
         'tutorial.txt': file('Great job!\nType 1 to navigate between my messages and terminal'),
-        'image.jpg': imageFile('placeholder'),
+        'image.webp': imageFile('placeholder'),
       }),
     }),
   }),
