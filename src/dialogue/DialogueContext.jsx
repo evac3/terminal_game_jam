@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useScreen } from '../screens/ScreenContext';
 import { getEvent } from '../events';
+import { screens } from '../screens';
 import { parseScript, ScriptError } from './parser';
 import { DialogueRunner } from './runner';
 import { scripts } from './scripts';
@@ -69,6 +70,9 @@ export function DialogueProvider({ children }) {
           if (step.type === 'event' && !getEvent(step.id)) {
             throw new ScriptError(step.line, `unknown event "${step.id}" (see src/events/index.js)`);
           }
+          if (step.type === 'screen' && step.id !== 'terminal' && !screens[step.id]) {
+            throw new ScriptError(step.line, `unknown screen "${step.id}" (see src/screens/index.js)`);
+          }
         }
       } catch (err) {
         console.error(`Dialogue "${name}":`, err);
@@ -91,6 +95,7 @@ export function DialogueProvider({ children }) {
           }
         },
         event: (id) => eventListenersRef.current.forEach((fn) => fn(id)),
+        screen: (id) => (id === 'terminal' ? showTerminal() : showScreen(id)),
         wait: (options, step) => {
           setWaitingFor(options);
           setWaitingFrom(step.from);

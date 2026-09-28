@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import Terminal from './components/Terminal';
 import { DialogueProvider, useDialogue } from './dialogue/DialogueContext';
 import { screens } from './screens';
@@ -22,7 +22,11 @@ export default function App() {
 function MainWindow() {
   const { current, showTerminal } = useScreen();
   const { startDialogue, claimsKey } = useDialogue();
-  useScreenHotkeys(undefined, claimsKey);
+  // Hotkeys are off on a screen with `locksHotkeys` (e.g. the ending), and
+  // for keys the dialogue is waiting for.
+  const locked = screens[current?.id]?.locksHotkeys ?? false;
+  const isKeyClaimed = useCallback((key) => locked || claimsKey(key), [locked, claimsKey]);
+  useScreenHotkeys(undefined, isKeyClaimed);
 
   // Runs after Terminal has subscribed to `main:` lines (child effects run first).
   const startedRef = useRef(false);

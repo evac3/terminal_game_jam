@@ -115,6 +115,11 @@ export const TAGS = {
     if (prev?.type !== 'input') throw new ScriptError(line, 'wrong must come right after an input line');
     prev.wrong.push(text);
   },
+  // screen: <id>  switch the main window to a screen from src/screens (or `terminal`)
+  screen: (id, line) => {
+    if (!/^[\w-]+$/.test(id)) throw new ScriptError(line, 'screen needs an id, e.g. screen: ending');
+    return { type: 'screen', id, line };
+  },
   // event: <id>  start a game event from src/events
   event: (id, line) => {
     if (!/^[\w-]+$/.test(id)) throw new ScriptError(line, 'event needs an id, e.g. event: word-puzzle');

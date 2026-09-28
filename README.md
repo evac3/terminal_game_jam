@@ -42,15 +42,52 @@ reload the window. Close the window (or press Ctrl+C in the terminal) to stop.
 | `npm run dev:web` | Same UI in a normal browser at http://localhost:3000 (handy for browser devtools) |
 | `npm run build` | Builds the UI into `dist/` |
 | `npm start` | Builds, then runs the built app in Electron (what players will get) |
-| `npm run package` | Builds a double-clickable installer into `release/` (`.dmg` on Mac, `.exe` on Windows, `.AppImage` on Linux) |
+| `npm run package` | Builds installers for the computer you're on into `release/` |
+| `npm run package:mac` | Builds the Mac `.dmg` (one universal app for Intel and Apple Silicon Macs) |
+| `npm run package:win` | Builds the Windows installer and portable `.exe` (works from a Mac too) |
+| `npm run package:all` | Builds both Mac and Windows at once |
+
+### Making a new version to share
+
+```sh
+cd ~/gamejam-2026
+npm run package:all
+```
+
+This takes about two minutes. It builds from your current code, so save
+first. The files land in `release/`:
+
+| File | For | How players use it |
+|---|---|---|
+| `Terminal Game-<version>-mac-universal.dmg` | Any Mac (Intel or Apple Silicon) | Open it, drag the app to Applications |
+| `Terminal Game-<version>-win-x64.exe` | Windows 10/11 | Installer: run it, pick a folder, then launch from the Start menu |
+| `Terminal Game-<version>-win-portable.exe` | Windows 10/11 | No install: double-click to play |
+
+The other files and folders in `release/` (`mac-universal/`,
+`win-unpacked/`, `.blockmap`, `.yml`) are leftovers from the build. Players
+don't need them.
+
+To change the version number in the file names, run `npm version patch`
+(0.1.0 → 0.1.1) before packaging. In a git repo this also makes a commit and
+tag. Or edit `"version"` in `package.json` by hand.
 
 ### Packaging notes
-- The Mac app is **not code-signed** (`"identity": null` in `package.json`),
-  so there are no keychain password prompts. On other Macs, first launch needs
-  right-click → **Open**, because macOS warns about unsigned apps. Signing
-  needs an Apple Developer ID certificate and can be set up later.
+- **Mac:** the app is **not code-signed** (`"identity": null` in
+  `package.json`), so there are no keychain password prompts. The first time
+  a player opens it, macOS blocks it as coming from an unidentified
+  developer. They should right-click the app → **Open** → **Open**. Signing
+  needs a paid Apple Developer ID and can be set up later.
+- **Windows:** the `.exe` files aren't signed either. Windows SmartScreen may
+  show "Windows protected your PC". Click **More info** → **Run anyway**.
 - `release/` and `dist/` are build output and are listed in `.gitignore`.
+  Share the files from `release/` directly (e.g. upload them to itch.io or a
+  GitHub release). Don't commit them.
 - The app uses the default Electron icon until an icon is added.
+- Packaging settings live in the `"build"` section of `package.json`:
+  - `mac.target`: a universal `dmg`.
+  - `win.target`: `nsis` (the installer) and `portable`, both x64.
+  - `nsis`: the installer lets the player choose a folder.
+  - `artifactName`: the output file names.
 
 ---
 
@@ -61,7 +98,7 @@ reload the window. Close the window (or press Ctrl+C in the terminal) to stop.
 | `help` | `help` | Shows the guide: every command with its usage, plus path and tips |
 | `ls` | `ls [-a] [path]` | Lists a folder. Folders end in `/`. `-a` also shows hidden files (names starting with `.`) |
 | `cd` | `cd [path]` | Changes folder. With no path, goes home. Supports `~`, `..` and `/` paths |
-| `view` | `view <file>` | Shows a text file's contents. Documents (like `puzzle.txt` from the word puzzle event) and images (like `image.jpg`) open in their own window instead |
+| `view` | `view <file>` | Shows a text file's contents. Documents (like `puzzle.txt` from the word puzzle event) and images (like `image.webp`) open in their own window instead |
 | `run` | `run <file>` | Opens a program file's mini game in a separate window. Only files created with `program()` can be run |
 | `clear` (or `cls`) | `clear` | Clears the screen |
 
@@ -82,7 +119,7 @@ path starting with `/` starts from the top. The game starts in `/home`.
 /home/guest/notes/todo.txt
 /home/admin/getStarted/2048.exe       program → opens the 2048 mini game
 /home/admin/getStarted/tutorial.txt   used by the tutorial in example.txt
-/home/admin/getStarted/image.jpg      image → opens in its own window (placeholder picture)
+/home/admin/getStarted/image.webp     image → opens in its own window
 /etc/hostname
 /etc/motd
 /var/log/auth.log
@@ -157,6 +194,7 @@ input [ready | yes | y]          ← wait for one of these typed keywords
 | `input main [cmd]` | Typed answers only count in the terminal, so the command really runs (used for the tutorial's commands). Meanwhile the NPC screen shows "[ press 1 to go to the terminal ]" and no reply box |
 | `wrong: <text>` | Goes right after an `input` line: what the NPC says when a typed answer on the NPC screen is wrong. With several `wrong:` lines, all are said |
 | `event: <id>` | Start a game event from `src/events` (e.g. `event: word-puzzle`) |
+| `screen: <id>` | Switch the main window to a screen from `src/screens` (e.g. `screen: ending`), or back with `screen: terminal` |
 | `# ...` | Comment. Blank lines are ignored too |
 
 Text lines (`main:`, `npc:`, `player:`) keep extra leading spaces after the
@@ -181,7 +219,7 @@ Starting a dialogue:
 - **Commands:** `terminal.startDialogue('<name>')`
 - **Game opening:** `OPENING_DIALOGUE` in `src/App.jsx`
 
-Script errors (like an unknown tag, or an `event:` id that doesn't exist)
+Script errors (like an unknown tag, or an `event:` / `screen:` id that doesn't exist)
 print as a `[dialogue error]` line in the terminal, with the line number.
 The script doesn't start.
 
@@ -221,7 +259,8 @@ src/components/Terminal.jsx, Terminal.css
 src/components/DocumentWindow.jsx, .css   document pop-out window
 src/components/ImageWindow.jsx            image pop-out window
 src/images/             images opened by `view` (index.js + image files)
-src/screens/            screens that switch in over the terminal (NPC dialogue...)
+src/screens/            screens that switch in over the terminal (NPC dialogue, ending)
+src/citations.js        collects every citation for the ending screen
 src/dialogue/           dialogue scripts: parser, runner, React connection
   scripts/*.txt         the plot scripts themselves
 src/events/             game events, one folder each (wordPuzzle/...)
@@ -236,8 +275,11 @@ src/games/              mini games (React)
 - `"main": "electron/main.js"`: where Electron starts.
 - `"build"`: electron-builder settings. These cover the app id, product name,
   which files go into the app (`dist/` and `electron/`), the output folder
-  (`release/`), the installer type per OS, and `mac.identity: null` (no
-  signing).
+  (`release/`), and the output file names. Also the installer per OS: a
+  universal Mac `dmg` (no signing: `mac.identity: null`), and a Windows
+  `nsis` installer plus a `portable` exe. See "Packaging notes".
+- `"scripts"`: `package`, `package:mac`, `package:win` and `package:all`
+  build the installers (see "Running it").
 - Everything is a devDependency, because Vite bundles React into `dist/`, so
   the packaged app doesn't need `node_modules`.
 
@@ -277,8 +319,10 @@ Electron.
   game opens. Set it to `null` for none.
 - `App`: wraps everything in `ScreenProvider`, then `DialogueProvider`.
 - `MainWindow`:
-  - Turns on the screen hotkeys (`useScreenHotkeys`). A key is skipped when
-    the dialogue is waiting for that key (`claimsKey`).
+  - Turns on the screen hotkeys (`useScreenHotkeys`) through
+    `isKeyClaimed`. A key is skipped when the current screen has
+    `locksHotkeys` (the ending), or when the dialogue is waiting for that key
+    (`claimsKey`).
   - Starts `OPENING_DIALOGUE` once. `startedRef` stops React dev mode from
     starting it twice.
   - Always renders `<Terminal active={...} />`, with `active` false while a
@@ -418,9 +462,10 @@ Each file is `export default { name, aliases?, description, usage, run(ctx) }`.
     terminal if it's already open.
 
 ### `src/screens/index.js`: screen registry
-`screens` maps a screen id to a React component. Each screen gets props
-`{ data, close }`: `data` is what was passed to `showScreen`, and `close()`
-returns to the terminal.
+`screens` maps a screen id to a React component: `npc` (NpcScreen) and
+`ending` (EndingScreen). Each screen gets props `{ data, close }`: `data` is
+what was passed to `showScreen`, and `close()` returns to the terminal. A
+component with `locksHotkeys = true` can't be left with the 1 hotkey.
 
 ### `src/screens/useScreenHotkeys.js`: key presses that switch screens
 - `SCREEN_HOTKEYS`: maps a key to a screen id (currently `1 → 'npc'`).
@@ -453,6 +498,27 @@ green-on-black style. Line classes: `.npc-line--npc` (light blue),
 `--player` (amber `#ffc46b`) and `--empty` (dim green). `.npc-divider` is the dashed line between conversations,
 `.npc-footer` is the corner hint, and `.npc-hint` blinks.
 
+### `src/screens/EndingScreen.jsx`: end of the demo (screen id `ending`)
+- Shown by `screen: ending` at the end of `example.txt`.
+- Page 1: `BANNER`, a big ASCII "END OF / DEMO", then "This is the end of
+  the demo. Thank you for playing!" and a blinking
+  "[ press Enter to see citations ]".
+- Page 2: "CITATIONS", listing `getCitations()`, each with its file name
+  above it, then "[ press Enter to go back ]".
+- Enter switches between the two pages. `locksHotkeys = true`, so 1
+  doesn't leave the ending.
+
+### `src/screens/EndingScreen.css`
+Centered green-on-black layout. The banner's font size scales with the
+window width, and it has a soft glow. The subtitle is light blue, the hint
+blinks, and the citations sit in a left-aligned column up to 720px wide.
+
+### `src/citations.js`
+`getCitations()` returns `[{ source, text }]` from every image's `citation`
+(`src/images/index.js`) and every event document's `citation`
+(`src/events/*`). Add a `citation` there and it shows up on the ending
+screen.
+
 ### `src/dialogue/parser.js`: script text → steps
 - `parseScript(source)`: returns a list of steps and throws `ScriptError` (with
   `.line`) on a bad line. Steps are:
@@ -464,6 +530,7 @@ green-on-black style. Line classes: `.npc-line--npc` (light blue),
     - `from` is `'main'`, `'npc'` or `null` (anywhere)
     - `wrong` is the list of `wrong:` lines
   - `{ type: 'event', id, line }`
+  - `{ type: 'screen', id, line }`
 - `SAY_TAGS` (`main`, `npc`, `player`): text tags whose text keeps its
   leading spaces. All other tags get trimmed text.
 - `TAGS`: maps a tag name to `(rest, line, steps) => step`. **Add new script
@@ -480,12 +547,12 @@ green-on-black style. Line classes: `.npc-line--npc` (light blue),
 ### `src/dialogue/runner.js`: plays the steps
 - `matchesOption(option, input)`: checks `{ key }` or `{ text }` against one
   option. Single-letter keys and keywords are not case-sensitive.
-- `DialogueRunner(steps, { say, event, wait, end })`:
+- `DialogueRunner(steps, { say, event, screen, wait, end })`:
   - `start()`: runs from the first step.
   - `#advance()`: runs steps until it reaches an `input` step (then calls
     `wait(options, step)`) or the end (then calls `end()`).
-    - It calls `say(target, text, step)` for `say` steps and `event(id)` for
-      `event` steps.
+    - It calls `say(target, text, step)` for `say` steps, `event(id)` for
+      `event` steps and `screen(id)` for `screen` steps.
     - A `wait` step pauses with a timer, then continues.
   - `stop()`: cancels a pending `wait` timer (`start()` calls it first).
   - `waitingFor`: the current input options, or `null`.
@@ -503,7 +570,10 @@ green-on-black style. Line classes: `.npc-line--npc` (light blue),
   - `startDialogue(name)`: parses `scripts/<name>.txt` and plays it. Returns
     false and prints a `[dialogue error]` line in the terminal if the script
     is missing or invalid, including an `event:` id not found in
-    `src/events`.
+    `src/events` or a `screen:` id not found in `src/screens` (other than
+    `terminal`).
+    - `screen:` lines call `showScreen(id)`, or `showTerminal()` for
+      `terminal`.
     - `npc` and `player` lines go to `npcLines` (as kind `npc` / `player`)
       and switch to the NPC screen.
     - `main` lines go to the terminal and switch to it.
@@ -550,10 +620,12 @@ The game's current story draft, played at game start
    - 3.3: the player pushes back.
    - 3.4–3.10: one part per command, each waiting for the real command in
      the terminal (`input main [...]`): `cd admin/getStarted`, `ls`,
-     `view tutorial.txt`, `view image.jpg`, then the up/down arrows tip, then
+     `view tutorial.txt`, `view image.webp`, then the up/down arrows tip, then
      `run 2048.exe` and `help`.
 4. More conversation, then the word puzzle event (`event: word-puzzle`,
    `input npc [incident]`, `wrong:`).
+5. After the right answer: `wait 1500`, then `screen: ending` (end of demo
+   and citations).
 
 ### `src/dialogue/scripts/og_example.txt`
 The earlier sample scene that uses every input type: `any`, `space`,
@@ -561,11 +633,13 @@ The earlier sample scene that uses every input type: `any`, `space`,
 `continue | esc`.
 
 ### `src/images/index.js`: image registry
-- `images`: maps an image id to `{ title, src }`. `src` is the imported
+- `images`: maps an image id to `{ title, src, citation? }`. `src` is the imported
   file, so Vite bundles it for dev and the packaged app.
 - `getImage(id)`: returns the image, or `null`.
-- `placeholder` (`image.jpg`): a placeholder picture for the tutorial. **To
-  replace it:** overwrite `src/images/image.jpg` (keep the name), or import a
+- `placeholder` (`image.webp`): the picture used in the tutorial. Its
+  citation is "Van Rooyen, Theunis. (2020). Nuclear Physics for Nuclear
+  Engineers." **To
+  replace it:** overwrite `src/images/image.webp` (keep the name), or import a
   different file here.
 
 ### `src/events/index.js`: event registry
@@ -577,11 +651,12 @@ The earlier sample scene that uses every input type: `any`, `space`,
 - `runEvent(id, ctx)`: calls the event's `start(ctx)`, where `ctx` is
   `{ session, terminal }`. Throws for an unknown id.
 - Event shape:
-  `{ id, name, documents?: { <docId>: { title, text } }, start({ session, terminal }) }`.
+  `{ id, name, documents?: { <docId>: { title, text, citation? } }, start({ session, terminal }) }`.
 
 ### `src/events/wordPuzzle/index.js`: event 1, word puzzle
 id `word-puzzle`. It has one document, `word-puzzle` (title `puzzle.txt`,
-text from `puzzle.txt`). `start` puts `docFile('word-puzzle')` at
+text from `puzzle.txt`, and the Terranova (2026) article as its
+`citation`). `start` puts `docFile('word-puzzle')` at
 `~/puzzle.txt`.
 
 ### `src/events/wordPuzzle/puzzle.txt`
@@ -635,5 +710,8 @@ Board and tile colors. Each tile value has a class `.g2048-tile--<value>`
 - **New image:** put the file in `src/images/`, import it in
   `src/images/index.js` and add it to `images`, then put
   `imageFile('<id>')` in `TEMPLATE` (or add it from an event with `addFile`).
+- **New citation:** add `citation: '...'` to the image in
+  `src/images/index.js` or to the document in its event. The ending screen
+  lists it automatically.
 - **New document:** add it to an event's `documents`, then put a
   `docFile('<docId>')` somewhere (in the event's `start`, or in `TEMPLATE`).

@@ -14,8 +14,16 @@ export default {
   name: 'Word puzzle',
 
   // Documents open in their own window. Key = document id.
+  // `citation` (optional) is listed on the ending screen.
   documents: {
-    'word-puzzle': { title: 'puzzle.txt', text: puzzleText },
+    'word-puzzle': {
+      title: 'puzzle.txt',
+      text: puzzleText,
+      citation:
+        'Terranova, M. L. (2026). From Source to Target: The Neutron Pathway for the Clinical ' +
+        'Translation of Boron Neutron Capture. Journal of Nuclear Engineering, 7(1), 6. ' +
+        'https://doi.org/10.3390/jne7010006',
+    },
   },
 
   start({ session }) {
