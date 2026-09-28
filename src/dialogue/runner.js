@@ -7,6 +7,7 @@
  * Callbacks:
  *   say(target, text, step)  print a line ('main', 'npc' or 'player')
  *   event(id)                a game event fires (`event:` line)
+ *   screen(id)               switch the main window (`screen:` line)
  *   wait(options, step)      now waiting on player input options
  *   end()                    the script finished
  */
@@ -25,9 +26,9 @@ export function matchesOption(option, input) {
 export class DialogueRunner {
   #timerId = null;
 
-  constructor(steps, { say, event, wait, end }) {
+  constructor(steps, { say, event, screen, wait, end }) {
     this.steps = steps;
-    this.callbacks = { say, event, wait, end };
+    this.callbacks = { say, event, screen, wait, end };
     this.index = 0;
     this.done = false;
   }
@@ -104,6 +105,9 @@ export class DialogueRunner {
       }
       if (step.type === 'event') {
         this.callbacks.event(step.id);
+      }
+      if (step.type === 'screen') {
+        this.callbacks.screen(step.id);
       }
 
       this.index++;
