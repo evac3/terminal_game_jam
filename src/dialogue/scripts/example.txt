@@ -169,7 +169,7 @@ wait 800
 
 # 3.7  view (images)
 npc: view can open images too. Open the file “image.webp”
-input main [view image.jpg]
+input main [view image.webp]
 wait 1000
 
 # 3.8  command history
