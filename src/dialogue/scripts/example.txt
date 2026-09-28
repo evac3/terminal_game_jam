@@ -168,8 +168,8 @@ input main [view tutorial.txt]
 wait 800
 
 # 3.7  view (images)
-npc: view can open images too. Open the file “image.jpg”
-input main [view image.jpg]
+npc: view can open images too. Open the file “image.webp”
+input main [view image.webp]
 wait 1000
 
 # 3.8  command history
@@ -231,6 +231,7 @@ input [Enter]
 npc: Wait. Something just landed in your home folder.
 event: word-puzzle
 npc: It's a puzzle. Find it in your terminal and read it.
+npc: CLUE: Neutron #1. Synonymous with affair (Let’s hope ours has a happy ending)!
 npc: When you know the answer, come back here (press 1) and tell me.
 npc: (press Enter to go to the terminal)
 input [Enter]

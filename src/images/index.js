@@ -1,4 +1,4 @@
-import placeholder from './image.jpg';
+import placeholder from './image.webp';
 
 /**
  * Images the player can open with `view`. Key = image id, used by
@@ -6,11 +6,11 @@ import placeholder from './image.jpg';
  * listed on the ending screen.
  *
  * To add an image: put the file in this folder, import it here, and add an entry.
- * To replace the placeholder: overwrite image.jpg (keep the name) or change the import.
+ * To replace the image: overwrite image.webp (keep the name) or change the import.
  */
 export const images = {
   placeholder: {
-    title: 'image.jpg',
+    title: 'image.webp',
     src: placeholder,
     citation: 'Van Rooyen, Theunis. (2020). Nuclear Physics for Nuclear Engineers.',
   },

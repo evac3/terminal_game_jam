@@ -98,7 +98,7 @@ tag. Or edit `"version"` in `package.json` by hand.
 | `help` | `help` | Shows the guide: every command with its usage, plus path and tips |
 | `ls` | `ls [-a] [path]` | Lists a folder. Folders end in `/`. `-a` also shows hidden files (names starting with `.`) |
 | `cd` | `cd [path]` | Changes folder. With no path, goes home. Supports `~`, `..` and `/` paths |
-| `view` | `view <file>` | Shows a text file's contents. Documents (like `puzzle.txt` from the word puzzle event) and images (like `image.jpg`) open in their own window instead |
+| `view` | `view <file>` | Shows a text file's contents. Documents (like `puzzle.txt` from the word puzzle event) and images (like `image.webp`) open in their own window instead |
 | `run` | `run <file>` | Opens a program file's mini game in a separate window. Only files created with `program()` can be run |
 | `clear` (or `cls`) | `clear` | Clears the screen |
 
@@ -119,7 +119,7 @@ path starting with `/` starts from the top. The game starts in `/home`.
 /home/guest/notes/todo.txt
 /home/admin/getStarted/2048.exe       program → opens the 2048 mini game
 /home/admin/getStarted/tutorial.txt   used by the tutorial in example.txt
-/home/admin/getStarted/image.jpg      image → opens in its own window (placeholder picture)
+/home/admin/getStarted/image.webp     image → opens in its own window
 /etc/hostname
 /etc/motd
 /var/log/auth.log
@@ -620,7 +620,7 @@ The game's current story draft, played at game start
    - 3.3: the player pushes back.
    - 3.4–3.10: one part per command, each waiting for the real command in
      the terminal (`input main [...]`): `cd admin/getStarted`, `ls`,
-     `view tutorial.txt`, `view image.jpg`, then the up/down arrows tip, then
+     `view tutorial.txt`, `view image.webp`, then the up/down arrows tip, then
      `run 2048.exe` and `help`.
 4. More conversation, then the word puzzle event (`event: word-puzzle`,
    `input npc [incident]`, `wrong:`).
@@ -636,10 +636,10 @@ The earlier sample scene that uses every input type: `any`, `space`,
 - `images`: maps an image id to `{ title, src, citation? }`. `src` is the imported
   file, so Vite bundles it for dev and the packaged app.
 - `getImage(id)`: returns the image, or `null`.
-- `placeholder` (`image.jpg`): a placeholder picture for the tutorial. Its
+- `placeholder` (`image.webp`): the picture used in the tutorial. Its
   citation is "Van Rooyen, Theunis. (2020). Nuclear Physics for Nuclear
   Engineers." **To
-  replace it:** overwrite `src/images/image.jpg` (keep the name), or import a
+  replace it:** overwrite `src/images/image.webp` (keep the name), or import a
   different file here.
 
 ### `src/events/index.js`: event registry
