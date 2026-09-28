@@ -13,7 +13,7 @@
  *   };
  *
  * `run` returns the output string (or nothing) and may be async.
- * `terminal` is { clear(), launch(gameId), openDocument(docId), showScreen(screenId, data?),
+ * `terminal` is { clear(), launch(gameId), openDocument(docId), openImage(imageId), showScreen(screenId, data?),
  * startDialogue(name) }.
  */
 const modules = import.meta.glob(['./*.js', '!./index.js'], { eager: true });

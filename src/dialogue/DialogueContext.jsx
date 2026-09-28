@@ -12,7 +12,9 @@ import { scripts } from './scripts';
  *   startDialogue(name)   start scripts/<name>.txt. Returns false on error
  *   npcLines              every NPC-screen line so far (kept across dialogues)
  *                         [{ id, kind: 'npc' | 'player' | 'divider', text }]
+ *                         ('player' = `player:` lines and typed replies)
  *   waitingFor            input options being waited on, or null
+ *   waitingFrom           where a typed answer must come from: 'main', 'npc' or null (anywhere)
  *   active                true while a script is running
  *   accepts(input), submit(input, atStep?)   check or give player input:
  *                         { key } or { text, from: 'main' | 'npc' }
@@ -36,6 +38,7 @@ export function DialogueProvider({ children }) {
 
   const [npcLines, setNpcLines] = useState([]);
   const [waitingFor, setWaitingFor] = useState(null);
+  const [waitingFrom, setWaitingFrom] = useState(null);
   const [active, setActive] = useState(false);
 
   const addNpcLine = useCallback((text, kind) => {
@@ -76,17 +79,22 @@ export function DialogueProvider({ children }) {
       // Keep earlier conversations, separated by a divider.
       setNpcLines((prev) => (prev.length ? [...prev, { id: nextIdRef.current++, kind: 'divider', text: '' }] : prev));
       const runner = new DialogueRunner(steps, {
+        // `main:` lines go to the terminal. The conversation (`npc:` and
+        // `player:` lines) stays on the NPC screen.
         say: (target, text) => {
-          if (target === 'npc') {
-            addNpcLine(text, 'npc');
-            showScreen('npc');
-          } else {
+          if (target === 'main') {
             printMain(text);
             showTerminal();
+          } else {
+            addNpcLine(text, target);
+            showScreen('npc');
           }
         },
         event: (id) => eventListenersRef.current.forEach((fn) => fn(id)),
-        wait: (options) => setWaitingFor(options),
+        wait: (options, step) => {
+          setWaitingFor(options);
+          setWaitingFrom(step.from);
+        },
         end: () => {
           setWaitingFor(null);
           setActive(false);
@@ -116,7 +124,7 @@ export function DialogueProvider({ children }) {
   const reply = useCallback(
     (text) => {
       if (!text.trim()) return false;
-      addNpcLine(text, 'player');
+      addNpcLine(`> ${text}`, 'player');
 
       const wrongReplies = runnerRef.current?.wrongReplies ?? [];
       const correct = submit({ text, from: 'npc' });
@@ -131,6 +139,9 @@ export function DialogueProvider({ children }) {
     const onKeyDown = (e) => {
       const runner = runnerRef.current;
       if (e.repeat || !runner?.accepts({ key: e.key })) return;
+      // The key is the answer, so it mustn't also be typed into the focused
+      // input (e.g. the letter pressed for [any] ending up in the command line).
+      if (e.key.length === 1) e.preventDefault();
       // Decide now, before the key also submits a command or reply, but continue
       // on the next tick so that command's output prints first. `atStep` stops
       // this key from also answering whatever step comes next.
@@ -142,8 +153,8 @@ export function DialogueProvider({ children }) {
   }, []);
 
   const value = useMemo(
-    () => ({ startDialogue, npcLines, waitingFor, active, accepts, claimsKey, submit, reply, onMainPrint, onGameEvent }),
-    [startDialogue, npcLines, waitingFor, active, accepts, claimsKey, submit, reply, onMainPrint, onGameEvent]
+    () => ({ startDialogue, npcLines, waitingFor, waitingFrom, active, accepts, claimsKey, submit, reply, onMainPrint, onGameEvent }),
+    [startDialogue, npcLines, waitingFor, waitingFrom, active, accepts, claimsKey, submit, reply, onMainPrint, onGameEvent]
   );
 
   return <DialogueContext.Provider value={value}>{children}</DialogueContext.Provider>;

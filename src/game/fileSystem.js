@@ -3,18 +3,21 @@
  *
  * A node is either:
  *   { type: 'dir',  children: { [name]: node } }
- *   { type: 'file', content: string, game?: string, doc?: string }
+ *   { type: 'file', content: string, game?: string, doc?: string, image?: string }
  *
  * A file with `game` set is a program: `run <file>` launches that mini game
  * (the id must match a key in src/games/index.js).
  * A file with `doc` set is a document: `view <file>` opens it in its own
  * window (the id must match a document in an event, see src/events).
+ * A file with `image` set is an image: `view <file>` opens it in its own
+ * window (the id must match a key in src/images/index.js).
  */
 
 export const dir = (children = {}) => ({ type: 'dir', children });
 export const file = (content = '', extra = {}) => ({ type: 'file', content, ...extra });
 export const program = (game, content = `[program: ${game}]`) => file(content, { game });
 export const docFile = (docId) => file('', { doc: docId });
+export const imageFile = (imageId) => file('', { image: imageId });
 
 const TEMPLATE = dir({
   home: dir({
@@ -32,6 +35,7 @@ const TEMPLATE = dir({
       getStarted: dir({
         '2048.exe': program('2048', 'A puzzle program. Start it with: run 2048.exe'),
         'tutorial.txt': file('Great job!\nType 1 to navigate between my messages and terminal'),
+        'image.jpg': imageFile('placeholder'),
       }),
     }),
   }),

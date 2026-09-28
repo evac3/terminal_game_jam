@@ -28,7 +28,10 @@
   color: #9fe8ff;
 }
 
-.npc-line--player,
+.npc-line--player {
+  color: #ffc46b;
+}
+
 .npc-line--empty {
   color: #1f8a3c;
 }

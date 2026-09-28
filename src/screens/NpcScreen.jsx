@@ -3,16 +3,20 @@ import { useDialogue } from '../dialogue/DialogueContext';
 import './NpcScreen.css';
 
 /**
- * Shows every `npc:` line so far (earlier conversations too), the player's
- * replies, and an input line when a keyword is expected.
+ * Shows the conversation so far (earlier conversations too): `npc:` lines,
+ * `player:` lines and the player's typed replies, plus an input line when a
+ * keyword is expected.
  */
 export default function NpcScreen() {
-  const { npcLines, waitingFor, reply } = useDialogue();
+  const { npcLines, waitingFor, waitingFrom, reply } = useDialogue();
   const [text, setText] = useState('');
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
 
-  const wantsText = waitingFor?.some((o) => o.kind === 'text') ?? false;
+  const expectsText = waitingFor?.some((o) => o.kind === 'text') ?? false;
+  // `input main [...]`: the answer is a terminal command, so no reply box here.
+  const wantsText = expectsText && waitingFrom !== 'main';
+  const wantsTerminal = expectsText && waitingFrom === 'main';
   const keyLabels = waitingFor?.filter((o) => o.kind === 'key').map((o) => o.label) ?? [];
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export default function NpcScreen() {
             <hr key={line.id} className="npc-divider" />
           ) : (
             <div key={line.id} className={`npc-line npc-line--${line.kind}`}>
-              {line.kind === 'player' ? `> ${line.text}` : line.text}
+              {line.text}
             </div>
           )
         )}
@@ -58,7 +62,8 @@ export default function NpcScreen() {
             />
           </div>
         )}
-        {keyLabels.length > 0 && !wantsText && (
+        {wantsTerminal && <div className="npc-hint">[ press 1 to go to the terminal ]</div>}
+        {keyLabels.length > 0 && !expectsText && (
           <div className="npc-hint">[ press {keyLabels.join(' / ')} ]</div>
         )}
         <div ref={bottomRef} />

@@ -61,12 +61,12 @@ reload the window. Close the window (or press Ctrl+C in the terminal) to stop.
 | `help` | `help` | Shows the guide: every command with its usage, plus path and tips |
 | `ls` | `ls [-a] [path]` | Lists a folder. Folders end in `/`. `-a` also shows hidden files (names starting with `.`) |
 | `cd` | `cd [path]` | Changes folder. With no path, goes home. Supports `~`, `..` and `/` paths |
-| `view` | `view <file>` | Shows a file's contents. Document files (like `puzzle.txt` from the word puzzle event) open in their own window instead |
+| `view` | `view <file>` | Shows a text file's contents. Documents (like `puzzle.txt` from the word puzzle event) and images (like `image.jpg`) open in their own window instead |
 | `run` | `run <file>` | Opens a program file's mini game in a separate window. Only files created with `program()` can be run |
 | `clear` (or `cls`) | `clear` | Clears the screen |
 
-Paths: `~` is the home folder (`/home/guest`), `..` is the folder above, and a
-path starting with `/` starts from the top.
+Paths: `~` is the home folder (`/home`), `..` is the folder above, and a
+path starting with `/` starts from the top. The game starts in `/home`.
 
 ## Keys
 
@@ -78,11 +78,11 @@ path starting with `/` starts from the top.
 ## Mock file system
 
 ```
-/home/guest/2048.exe          program → opens the 2048 mini game
 /home/guest/readme.txt
 /home/guest/notes/todo.txt
-/home/admin/backup.tar
-/home/admin/.secret           hidden (ls -a)
+/home/admin/getStarted/2048.exe       program → opens the 2048 mini game
+/home/admin/getStarted/tutorial.txt   used by the tutorial in example.txt
+/home/admin/getStarted/image.jpg      image → opens in its own window (placeholder picture)
 /etc/hostname
 /etc/motd
 /var/log/auth.log
@@ -91,7 +91,7 @@ path starting with `/` starts from the top.
 
 Added by events during play:
 ```
-/home/guest/puzzle.txt        document → opens in its own window (word puzzle event)
+/home/puzzle.txt              document → opens in its own window (word puzzle event)
 ```
 
 ---
@@ -104,10 +104,11 @@ Added by events during play:
 3. `execute` splits the line into a command and arguments, finds the command
    file, and runs it with the player's `session`.
 4. The command returns text to print. It can also call `terminal.clear()`,
-   `terminal.launch(gameId)` or `terminal.openDocument(docId)`.
-5. `launch` and `openDocument` open the app again in a new window at
-   `?game=<id>` or `?doc=<id>`, and `main.jsx` shows that mini game or
-   document instead of the terminal.
+   `terminal.launch(gameId)`, `terminal.openDocument(docId)` or
+   `terminal.openImage(imageId)`.
+5. `launch`, `openDocument` and `openImage` open the app again in a new
+   window at `?game=<id>`, `?doc=<id>` or `?image=<id>`, and `main.jsx` shows
+   that mini game, document or image instead of the terminal.
 
 ### Screens (switching inside the main window)
 
@@ -142,18 +143,24 @@ input [ready | yes | y]          ← wait for one of these typed keywords
 
 | Line | Meaning |
 |---|---|
-| `main: <text>` | Print in the main terminal window (the view switches to the terminal) |
-| `npc: <text>` | Print on the NPC dialogue screen (the view switches to the NPC screen) |
+| `main: <text>` | Print in the main terminal window (the view switches to the terminal). Use it for system messages, not conversation |
+| `npc: <text>` | NPC's line on the NPC screen, in light blue (the view switches to the NPC screen) |
+| `player: <text>` | Player's line on the NPC screen, in amber (the view switches to the NPC screen). Scripts start these with `> ` |
+| `wait <time>` | Pause before the next line: `wait 800` or `wait 800ms` (milliseconds), `wait 1.5s` (seconds) |
 | `input [enter]` | Wait for a key press. Key names: `enter`, `space`, `tab`, `esc`, `backspace`, `up`, `down`, `left`, `right` |
 | `input [any]` | Wait for any key press |
 | `input [key:y]` | Wait for one specific key |
 | `input [yes]` | Wait for a typed keyword + Enter. Not case-sensitive, and extra spaces are ignored |
 | `input [yes \| y]` | Several accepted answers, separated by `\|` (keys and keywords can be mixed) |
 | `input ["enter"]` | Quotes force a keyword (the word "enter", not the Enter key) |
-| `input npc [word]` | Typed answers only count on the NPC screen. `input main [word]` means only in the terminal. Key presses still count anywhere |
+| `input npc [word]` | Typed answers only count on the NPC screen. Key presses still count anywhere |
+| `input main [cmd]` | Typed answers only count in the terminal, so the command really runs (used for the tutorial's commands). Meanwhile the NPC screen shows "[ press 1 to go to the terminal ]" and no reply box |
 | `wrong: <text>` | Goes right after an `input` line: what the NPC says when a typed answer on the NPC screen is wrong. With several `wrong:` lines, all are said |
 | `event: <id>` | Start a game event from `src/events` (e.g. `event: word-puzzle`) |
 | `# ...` | Comment. Blank lines are ignored too |
+
+Text lines (`main:`, `npc:`, `player:`) keep extra leading spaces after the
+colon, so indented text lines up (e.g. `npc:     L downloads`).
 
 `src/dialogue/scripts/intro.txt` has the full format reference in its
 header. `example.txt` uses every feature, including the word puzzle event.
@@ -207,11 +214,13 @@ index.html              page shell
 vite.config.js          Vite settings
 electron/main.js        Electron: creates the windows
 scripts/dev.js          `npm run dev`: starts Vite + Electron together
-src/main.jsx            entry: shows the main window (App), a mini game, or a document
+src/main.jsx            entry: shows the main window (App), a mini game, a document, or an image
 src/App.jsx             main window: the terminal and the active screen
 src/hooks/useTerminal.js
 src/components/Terminal.jsx, Terminal.css
 src/components/DocumentWindow.jsx, .css   document pop-out window
+src/components/ImageWindow.jsx            image pop-out window
+src/images/             images opened by `view` (index.js + image files)
 src/screens/            screens that switch in over the terminal (NPC dialogue...)
 src/dialogue/           dialogue scripts: parser, runner, React connection
   scripts/*.txt         the plot scripts themselves
@@ -259,6 +268,7 @@ Electron.
 ### `src/main.jsx`: entry point
 `Root` reads the URL:
 - `?doc=<id>`: shows `<DocumentWindow id />`.
+- `?image=<id>`: shows `<ImageWindow id />`.
 - `?game=<id>`: shows that game from `src/games` (or "Unknown game").
 - Neither: shows `<App />`.
 
@@ -289,6 +299,7 @@ Electron.
     - `clear()`, `showScreen()` and `startDialogue()`.
     - `launch(gameId)`: opens a 480×640 game window.
     - `openDocument(docId)`: opens a 760×820 document window.
+    - `openImage(imageId)`: opens an 880×640 image window.
   - Subscribes to the dialogue's `main:` lines (`onMainPrint`) and adds them
     to `lines`.
   - Subscribes to `event:` lines (`onGameEvent`) and runs them with
@@ -326,7 +337,13 @@ It also sets the window title, and shows "Unknown document" for a bad id.
 
 ### `src/components/DocumentWindow.css`
 Readable text column (max 680px, 15px, light green on black) with a sticky
-header.
+header. `.doc-image` makes an image fit the window width. `ImageWindow` uses
+these styles too.
+
+### `src/components/ImageWindow.jsx`: image pop-out
+Shows an image from `getImage(id)` (`src/images`): the same header as the
+document window (title and Close), then the picture, scaled down to fit. It
+also sets the window title, and shows "Unknown image" for a bad id.
 
 ### `src/game/engine.js`
 - `MAX_COMMAND_LENGTH` (1000): longer input is cut off.
@@ -345,13 +362,15 @@ header.
 
 ### `src/game/fileSystem.js`: mock file system
 - Node shapes: `{ type: 'dir', children }` and
-  `{ type: 'file', content, game?, doc? }`.
+  `{ type: 'file', content, game?, doc?, image? }`.
 - `dir(children)`: makes a folder.
 - `file(content, extra)`: makes a file. `extra` adds more fields.
 - `program(gameId, content)`: makes a runnable file. `run` launches mini game
   `gameId`, which must be a key in `src/games/index.js`.
 - `docFile(docId)`: makes a document file. `view` opens document `docId`
   (from an event's `documents`) in its own window.
+- `imageFile(imageId)`: makes an image file. `view` opens image `imageId`
+  (from `src/images/index.js`) in its own window.
 - `addFile(root, absPath, node)`: puts a file or folder at a path, replacing
   anything already there. The parent folder must exist. Events use this.
 - `TEMPLATE`: the starting file tree. **Add or change game files here.**
@@ -376,7 +395,7 @@ header.
 ### `src/game/commands/*.js`: one file per command
 Each file is `export default { name, aliases?, description, usage, run(ctx) }`.
 `ctx` is `{ args, session, terminal, commands }`, where `terminal` is
-`{ clear(), launch(gameId), openDocument(docId), showScreen(screenId, data?), startDialogue(name) }`.
+`{ clear(), launch(gameId), openDocument(docId), openImage(imageId), showScreen(screenId, data?), startDialogue(name) }`.
 `run` returns the text to show, or nothing, and can be `async`.
 
 | File | Notes |
@@ -384,7 +403,7 @@ Each file is `export default { name, aliases?, description, usage, run(ctx) }`.
 | `help.js` | Builds the guide from every command's `usage` and `description`, then adds the Paths, Keys (`1` = reread messages) and Tips sections |
 | `ls.js` | `-a` shows hidden files, and a path argument is optional. Listing a file prints its name |
 | `cd.js` | Default target is `~`. Errors for missing paths and for files |
-| `view.js` | One file argument. Errors for a missing argument, a missing file or a folder. Document files (`doc` set) call `terminal.openDocument(doc)` instead of printing |
+| `view.js` | One file argument. Errors for a missing argument, a missing file or a folder. Image files (`image` set) call `terminal.openImage(image)`, document files (`doc` set) call `terminal.openDocument(doc)`, and anything else prints its content |
 | `run.js` | One file argument. Checks the file exists, isn't a folder and has `game`, then calls `terminal.launch(game)` |
 | `clear.js` | Alias `cls`. Calls `terminal.clear()` |
 
@@ -413,32 +432,40 @@ returns to the terminal.
   while the terminal input has text. It stops the key from also being typed.
 
 ### `src/screens/NpcScreen.jsx`: NPC dialogue screen (screen id `npc`)
-- Shows `npcLines` from `useDialogue()`, the whole message history, so the
-  player can press 1 to reread it. NPC lines are light blue, the player's
-  replies show as `> text`, and each conversation is separated by a dashed
-  line. Shows "No messages yet." before anything has been said.
+- Shows `npcLines` from `useDialogue()`, the whole conversation history, so
+  the player can press 1 to reread it.
+  - NPC lines are light blue.
+  - Player lines (`player:` script lines and typed replies, which are stored
+    as `> text`) are amber.
+  - Each conversation is separated by a dashed line.
+  - Shows "No messages yet." before anything has been said.
 - A fixed `[1] back to terminal` hint sits in the bottom-right corner.
 - When a keyword is expected, shows a `>` input line and focuses it. Enter
   calls `reply(text)`.
+- When the keyword must be typed in the terminal (`waitingFrom === 'main'`),
+  it shows "[ press 1 to go to the terminal ]" instead of the input line.
 - When only a key is expected, shows a blinking hint like `[ press Enter ]`.
 - Keeps the newest line in view.
 
 ### `src/screens/NpcScreen.css`
 A centered text column (max 640px wide) anchored to the bottom, in the same
-green-on-black style. Line classes: `.npc-line--npc`, `--player` and
-`--empty`. `.npc-divider` is the dashed line between conversations,
+green-on-black style. Line classes: `.npc-line--npc` (light blue),
+`--player` (amber `#ffc46b`) and `--empty` (dim green). `.npc-divider` is the dashed line between conversations,
 `.npc-footer` is the corner hint, and `.npc-hint` blinks.
 
 ### `src/dialogue/parser.js`: script text → steps
 - `parseScript(source)`: returns a list of steps and throws `ScriptError` (with
   `.line`) on a bad line. Steps are:
-  - `{ type: 'say', target: 'main' | 'npc', text, line }`
+  - `{ type: 'say', target: 'main' | 'npc' | 'player', text, line }`
+  - `{ type: 'wait', duration, line }` (milliseconds)
   - `{ type: 'input', options, from, wrong, line }`, where:
     - each option is `{ kind: 'key', key, label }` or
       `{ kind: 'text', word, label }`
     - `from` is `'main'`, `'npc'` or `null` (anywhere)
     - `wrong` is the list of `wrong:` lines
   - `{ type: 'event', id, line }`
+- `SAY_TAGS` (`main`, `npc`, `player`): text tags whose text keeps its
+  leading spaces. All other tags get trimmed text.
 - `TAGS`: maps a tag name to `(rest, line, steps) => step`. **Add new script
   tags here.** A line is `<tag>: rest`, and the colon is optional.
   - A handler that returns nothing adds no step. `wrong` works this way: it
@@ -456,8 +483,11 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
 - `DialogueRunner(steps, { say, event, wait, end })`:
   - `start()`: runs from the first step.
   - `#advance()`: runs steps until it reaches an `input` step (then calls
-    `wait(options)`) or the end (then calls `end()`). It calls `say` for
-    `say` steps and `event(id)` for `event` steps.
+    `wait(options, step)`) or the end (then calls `end()`).
+    - It calls `say(target, text, step)` for `say` steps and `event(id)` for
+      `event` steps.
+    - A `wait` step pauses with a timer, then continues.
+  - `stop()`: cancels a pending `wait` timer (`start()` calls it first).
   - `waitingFor`: the current input options, or `null`.
   - `wrongReplies`: the current input step's `wrong:` lines, or `[]`.
   - `index`: the current step.
@@ -474,24 +504,30 @@ green-on-black style. Line classes: `.npc-line--npc`, `--player` and
     false and prints a `[dialogue error]` line in the terminal if the script
     is missing or invalid, including an `event:` id not found in
     `src/events`.
-    - `npc` lines go to `npcLines` and switch to the NPC screen.
+    - `npc` and `player` lines go to `npcLines` (as kind `npc` / `player`)
+      and switch to the NPC screen.
     - `main` lines go to the terminal and switch to it.
   - `npcLines`: `[{ id, kind: 'npc' | 'player' | 'divider', text }]`: every
     NPC-screen line so far. It's kept across dialogues, with a `divider` added
     when a new one starts, and trimmed to the last `MAX_NPC_LINES` (500).
   - `waitingFor`: current input options, or `null`.
+  - `waitingFrom`: where a typed answer must come from: `'main'`, `'npc'` or
+    `null` (anywhere).
   - `active`: true while a script is running.
   - `accepts(input)`, `submit(input, atStep?)`: pass-throughs to the runner.
   - `claimsKey(key)`: true if the current wait needs that key: a matching key
     target, or a keyword that starts with that character. Hotkeys skip
     claimed keys.
-  - `reply(text)`: adds the player's text to `npcLines`, then submits it as
+  - `reply(text)`: adds the player's text to `npcLines` as a `player` line
+    (`> text`), then submits it as
     `{ text, from: 'npc' }`. If it's wrong, it adds the step's `wrong:` lines
     as NPC lines. Empty text is ignored.
   - `onMainPrint(fn)`, `onGameEvent(fn)`: subscribe to `main:` lines or
     `event:` ids. Each returns an unsubscribe function.
 - A window key listener handles key-press targets. It checks the key before
-  any other handler. It then continues on the next tick, so a command's
+  any other handler. When a key is used as an answer, a character key (like
+  the letter pressed for `[any]`, or `y` for `[key:y]`) is kept from also
+  being typed into the focused input. It then continues on the next tick, so a command's
   output prints before the next dialogue lines, and it uses `atStep` so one
   key press can't answer two steps.
 
@@ -503,13 +539,34 @@ The first example script, with the full format reference in its header
 comments.
 
 ### `src/dialogue/scripts/example.txt`
-A longer sample scene that uses every input type: `any`, a named key
-(`space`), single keys (`key:y | key:n`), typed keywords, a quoted keyword
-(`"enter"`), and a mix of a keyword and a key (`continue | esc`). The player
-also has to look in the terminal to find the password (`hunter2` in
-`/home/admin/.secret`). Scene 6 is the word puzzle event
-(`event: word-puzzle`, `input npc [incident]`, `wrong:`). It's played at
-game start (`OPENING_DIALOGUE = 'example'`).
+The game's current story draft, played at game start
+(`OPENING_DIALOGUE = 'example'`):
+1. System warnings in the terminal.
+2. A back-and-forth between the NPC and the player (`npc:` / `player:` with
+   `wait` pauses).
+3. The tutorial, split into numbered parts (3.1–3.10):
+   - 3.1–3.2: what `cd` and directories are (with a folder tree), and how to
+     move around.
+   - 3.3: the player pushes back.
+   - 3.4–3.10: one part per command, each waiting for the real command in
+     the terminal (`input main [...]`): `cd admin/getStarted`, `ls`,
+     `view tutorial.txt`, `view image.jpg`, then the up/down arrows tip, then
+     `run 2048.exe` and `help`.
+4. More conversation, then the word puzzle event (`event: word-puzzle`,
+   `input npc [incident]`, `wrong:`).
+
+### `src/dialogue/scripts/og_example.txt`
+The earlier sample scene that uses every input type: `any`, `space`,
+`key:y | key:n`, typed keywords, a quoted keyword (`"enter"`), and
+`continue | esc`.
+
+### `src/images/index.js`: image registry
+- `images`: maps an image id to `{ title, src }`. `src` is the imported
+  file, so Vite bundles it for dev and the packaged app.
+- `getImage(id)`: returns the image, or `null`.
+- `placeholder` (`image.jpg`): a placeholder picture for the tutorial. **To
+  replace it:** overwrite `src/images/image.jpg` (keep the name), or import a
+  different file here.
 
 ### `src/events/index.js`: event registry
 - `ALL_EVENTS`: the list of event modules. **Add new events here.**
@@ -575,5 +632,8 @@ Board and tile colors. Each tile value has a class `.g2048-tile--<value>`
   `{ id, name, documents?, start }` (plus any `.txt` it needs), add it to
   `ALL_EVENTS` in `src/events/index.js`, then fire it from a script with
   `event: <id>`.
+- **New image:** put the file in `src/images/`, import it in
+  `src/images/index.js` and add it to `images`, then put
+  `imageFile('<id>')` in `TEMPLATE` (or add it from an event with `addFile`).
 - **New document:** add it to an event's `documents`, then put a
   `docFile('<docId>')` somewhere (in the event's `start`, or in `TEMPLATE`).

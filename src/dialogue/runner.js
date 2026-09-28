@@ -5,9 +5,9 @@
  * waits until submit() gets a matching key press or keyword.
  *
  * Callbacks:
- *   say(target, text, step)  print a line ('main' or 'npc')
+ *   say(target, text, step)  print a line ('main', 'npc' or 'player')
  *   event(id)                a game event fires (`event:` line)
- *   wait(options)            now waiting on player input options
+ *   wait(options, step)      now waiting on player input options
  *   end()                    the script finished
  */
 
@@ -96,7 +96,7 @@ export class DialogueRunner {
         return;
       }
       if (step.type === 'input') {
-        this.callbacks.wait(step.options);
+        this.callbacks.wait(step.options, step);
         return;
       }
       if (step.type === 'say') {

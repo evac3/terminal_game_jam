@@ -11,7 +11,7 @@ export function formatPrompt({ user, host, cwd }) {
 
 /**
  * Opens this app in its own window with `?<param>=<id>`; main.jsx reads it and
- * shows a mini game (?game=) or a document (?doc=). Reusing `name` reuses the window.
+ * shows a mini game (?game=), a document (?doc=) or an image (?image=). Reusing `name` reuses the window.
  */
 function openPopup(param, id, { width, height }) {
   return window.open(`?${param}=${encodeURIComponent(id)}`, `${param}-${id}`, `width=${width},height=${height}`);
@@ -55,6 +55,11 @@ export function useTerminal() {
       openDocument: (docId) => {
         if (!openPopup('doc', docId, { width: 760, height: 820 })) {
           appendLine('Could not open the document window.', 'system');
+        }
+      },
+      openImage: (imageId) => {
+        if (!openPopup('image', imageId, { width: 880, height: 640 })) {
+          appendLine('Could not open the image window.', 'system');
         }
       },
     }),

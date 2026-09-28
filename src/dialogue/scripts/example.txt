@@ -117,52 +117,74 @@ npc: It’s easy
 wait 800
 
 # --- Scene 3: tutorial ------------------------------------------
+# Command steps use `input main [...]`: they only count when typed in the
+# terminal (so the command really runs). Meanwhile the NPC screen shows
+# "[ press 1 to go to the terminal ]".
+
 npc: Let's get you started!
 wait 800
-npc: cd stands for “change directory.” You can think of a directory like a folder. 
-npc: It contains other files, and sometimes other folders that can contain more files. Here’s a little example: 
-npc: | home
-npc: |  L user
-npc: |     L downloads
-npc: |     L applications
-npc: |     L documents
-input [Enter]
-npc: You can use cd to go from a directory to a file/other directory within that directory, or .. to return to a previous directory. For example, if you’re in the “user” directory, you can use “cd downloads” to move to the “downloads” directory, or “..” to go back to the “home” directory. If you want to move through multiple directories at once, you can construct a path using “./.” For example, if you’re in the “documents” directory and want to go straight to “applications, you can either use “cd ..” and “cd applications” or use “cd home/user/applications” to go there in one command.
+
+# 3.1  cd: what a directory is
+npc: cd stands for “change directory.” You can think of a directory like a folder.
+npc: It contains other files, and sometimes other folders that can contain more files.
+npc: Here’s a little example:
+npc: home
+npc: L user
+npc:     L downloads
+npc:     L applications
+npc:     L documents
 input [Enter]
 
+# 3.2  cd: moving around
+npc: You can use cd to go from a directory to a file/other directory within that directory, or .. to return to a previous directory.
+input [Enter]
+npc: For example, if you’re in the “user” directory, you can use “cd downloads” to move to the “downloads” directory, or “..” to go back to the “home” directory.
+input [Enter]
+npc: If you want to move through multiple directories at once, you can construct a path using “/.”
+npc: For example, if you’re in the “documents” directory and want to go straight to “applications,” you can either use “cd ..” and “cd applications” or use “cd /home/user/applications” to go there in one command.
+input [Enter]
+
+# 3.3  player pushes back
 player: > huh? isn’t there a way to see all the files at once? why do I have to go through each one individually?
 input [Enter]
 
 npc: That’s just how it works…
 wait 800
-npc: You can see the current directory in the command line. Right now, you’re in “Home.” Try typing 1 to return to terminal and then type “cd admin/getStarted”
-input [cd admin/getStarted]
+
+# 3.4  try cd
+npc: You can see the current directory in the command line. Right now, you’re in “Home.”
+npc: Try typing “cd admin/getStarted”
+input main [cd admin/getStarted]
 wait 1000
 
+# 3.5  ls
 npc: ls stands for “list.” You can use it to see all the files in your current directory. Try it out!
-input [ls]
+input main [ls]
 wait 1000
 
+# 3.6  view
 npc: view can be used to open a text file. Open the file “tutorial.txt”
-input [view tutorial.txt]
+input main [view tutorial.txt]
 wait 800
-npc: Similarly, ii can be used to open an image. Open the file “image.jpg”
-input [ii image.jpg]
+
+# 3.7  view (images)
+npc: view can open images too. Open the file “image.jpg”
+input main [view image.jpg]
 wait 1000
 
+# 3.8  command history
 npc: You can use the up and down arrows in the command line to access previous commands.
 input [Enter]
 
+# 3.9  run
 npc: run lets you run an .exe file. Try running “2048.exe”
-input [run 2048.exe]
+input main [run 2048.exe]
 wait 1000
 
-npc: help brings up an abridged version of all these commands for easy reference.
-input [help]
+# 3.10  help
+npc: Lastly, help brings up an abridged version of all these commands for easy reference.
+input main [help]
 wait 1000
-
-npc: Lastly, you can use the up and down arrows in the command line to access previous commands.
-input [Enter]
 
 # --- Scene 4: post-tutorial dialogue ------------------------------------------
 player: > how is this supposed to help you?

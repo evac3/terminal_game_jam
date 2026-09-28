@@ -76,6 +76,8 @@ function getReadingDelay(text) {
  * Returning nothing adds no step (used by `wrong`, which changes the step before it).
  * Add new tags here.
  */
+const SAY_TAGS = new Set(['main', 'npc', 'player']);
+
 export const TAGS = {
   main: (text, line) => ({ type: 'say', target: 'main', text, line }),
   npc: (text, line) => ({ type: 'say', target: 'npc', text, line }),
@@ -140,7 +142,11 @@ export function parseScript(source) {
     const handler = m && TAGS[m[1].toLowerCase()];
     if (!handler) throw new ScriptError(lineNo, `unknown tag in "${line}"`);
 
-    const step = handler(m[2].trim(), lineNo, rawSteps);
+    // Text lines keep their leading spaces (after the one space following the
+    // colon), so indented text like a folder tree lines up.
+    const tag = m[1].toLowerCase();
+    const rest = SAY_TAGS.has(tag) ? m[2].trimEnd() : m[2].trim();
+    const step = handler(rest, lineNo, rawSteps);
     if (step) rawSteps.push(step);
   });
 
